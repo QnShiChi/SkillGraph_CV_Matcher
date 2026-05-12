@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DrawerPanel } from "@/components/drawer-panel";
+import { JdImportForm } from "@/components/jobs/jd-import-form";
 import { JobForm } from "@/components/jobs/job-form";
 import { JobList } from "@/components/jobs/job-list";
 import { PageHeader } from "@/components/page-header";
@@ -11,6 +12,7 @@ import { StateCard } from "@/components/state-card";
 import {
   createJob,
   deleteJob,
+  importJobPdf,
   type Job,
   type JobInput,
   type JobUpdateInput,
@@ -30,9 +32,11 @@ export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
   });
   const [deleteTarget, setDeleteTarget] = useState<Job | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const sortedJobs = [...jobs].sort(
     (left, right) =>
@@ -42,6 +46,11 @@ export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
   function openCreateDrawer() {
     setFormError(null);
     setDrawerState({ open: true, mode: "create" });
+  }
+
+  function openImportDrawer() {
+    setImportError(null);
+    setIsImportOpen(true);
   }
 
   function openEditDrawer(job: Job) {
@@ -56,6 +65,15 @@ export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
 
     setDrawerState({ open: false, mode: "create" });
     setFormError(null);
+  }
+
+  function closeImportDrawer() {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsImportOpen(false);
+    setImportError(null);
   }
 
   async function handleSubmit(payload: JobInput | JobUpdateInput) {
@@ -101,6 +119,22 @@ export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
     }
   }
 
+  async function handleImport(file: File) {
+    setIsSubmitting(true);
+    setImportError(null);
+    setListError(null);
+
+    try {
+      const importedJob = await importJobPdf(file);
+      setJobs((current) => [importedJob, ...current]);
+      setIsImportOpen(false);
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : "Unable to import JD PDF.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -108,13 +142,22 @@ export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
         title="Jobs"
         description="Create, edit, and delete job descriptions from a dedicated workspace backed by PostgreSQL."
         action={
-          <button
-            type="button"
-            onClick={openCreateDrawer}
-            className="rounded-[14px] bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-brand-dark)]"
-          >
-            Create Job
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={openImportDrawer}
+              className="rounded-[14px] bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-brand-dark)]"
+            >
+              Import JD PDF
+            </button>
+            <button
+              type="button"
+              onClick={openCreateDrawer}
+              className="rounded-[14px] border border-[var(--color-border)] px-5 py-3 text-sm font-semibold text-[var(--color-text)]"
+            >
+              Create Job
+            </button>
+          </div>
         }
       />
 
@@ -157,6 +200,19 @@ export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
           errorMessage={formError}
           onCancel={closeDrawer}
           onSubmit={handleSubmit}
+        />
+      </DrawerPanel>
+
+      <DrawerPanel
+        open={isImportOpen}
+        title="Import JD PDF"
+        onClose={closeImportDrawer}
+      >
+        <JdImportForm
+          isSubmitting={isSubmitting}
+          errorMessage={importError}
+          onCancel={closeImportDrawer}
+          onSubmit={handleImport}
         />
       </DrawerPanel>
 

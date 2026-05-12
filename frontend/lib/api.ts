@@ -13,6 +13,15 @@ export type Job = {
   title: string;
   description: string | null;
   required_skills_text: string | null;
+  responsibilities_text: string | null;
+  qualifications_text: string | null;
+  raw_jd_text: string | null;
+  source_type: "manual" | "jd_pdf";
+  source_file_name: string | null;
+  parse_status: "processed" | "failed";
+  parse_source: "manual" | "rule_based" | "llm_hybrid" | "rule_based_fallback";
+  parse_confidence: number | null;
+  structured_jd_json: Record<string, unknown> | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -86,6 +95,22 @@ export async function getJobs(): Promise<Job[]> {
   }
 }
 
+export async function getJob(jobId: number): Promise<Job | null> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/jobs/${jobId}`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as Job;
+  } catch {
+    return null;
+  }
+}
+
 export async function getCandidates(): Promise<Candidate[]> {
   try {
     const response = await fetch(`${getApiBaseUrl()}/api/candidates`, {
@@ -113,6 +138,25 @@ export async function createJob(payload: JobInput): Promise<Job> {
 
   if (!response.ok) {
     throw new Error("Failed to create job.");
+  }
+
+  return (await response.json()) as Job;
+}
+
+export async function importJobPdf(file: File): Promise<Job> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${getApiBaseUrl()}/api/jobs/import`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { detail?: string }
+      | null;
+    throw new Error(payload?.detail ?? "Unable to import JD PDF.");
   }
 
   return (await response.json()) as Job;

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { Job } from "@/lib/api";
 
 import { StateCard } from "@/components/state-card";
@@ -11,6 +13,14 @@ function formatDate(value: string) {
   const minutes = String(date.getUTCMinutes()).padStart(2, "0");
 
   return `${day}/${month}/${year} ${hours}:${minutes} UTC`;
+}
+
+function formatConfidence(value: number | null) {
+  if (value == null) {
+    return "N/A";
+  }
+
+  return `${Math.round(value * 100)}%`;
 }
 
 export function JobList({
@@ -48,6 +58,12 @@ export function JobList({
               </h3>
             </div>
             <div className="flex gap-2">
+              <Link
+                href={`/jobs/${job.id}`}
+                className="rounded-[12px] bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white"
+              >
+                Open Workspace
+              </Link>
               <button
                 type="button"
                 onClick={() => onEdit(job)}
@@ -72,6 +88,13 @@ export function JobList({
                 Required skills
               </p>
               <p className="mt-2">{job.required_skills_text ?? "No required skills captured yet."}</p>
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
+              <span>Source {job.source_type}</span>
+              <span>Parse {job.parse_status}</span>
+              <span>Engine {job.parse_source}</span>
+              <span>Confidence {formatConfidence(job.parse_confidence)}</span>
+              {job.source_file_name ? <span>File {job.source_file_name}</span> : null}
             </div>
           </div>
 

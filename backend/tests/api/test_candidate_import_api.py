@@ -45,7 +45,7 @@ def test_import_candidate_pdf_returns_job_id(client, session) -> None:
     payload = response.json()
     assert payload["job_id"] == job.id
     assert payload["source_type"] == "cv_pdf"
-    assert payload["extract_source"] in {"text_layer", "ocr_fallback"}
+    assert payload["extract_source"] == "text_layer"
     assert payload["parse_status"] == "processed"
     assert payload["parse_source"] in {"rule_based", "llm_hybrid", "rule_based_fallback"}
     assert payload["graph_sync_status"] in {"synced", "failed"}
@@ -119,7 +119,7 @@ def test_import_candidate_bulk_returns_batch_result(client, session) -> None:
     assert payload["failed_count"] == 0
     assert len(payload["results"]) == 2
     assert payload["results"][0]["status"] == "imported"
-    assert payload["results"][0]["extract_source"] in {"text_layer", "ocr_fallback"}
+    assert payload["results"][0]["extract_source"] == "text_layer"
 
 
 def test_import_candidate_bulk_returns_partial_success(client, session) -> None:

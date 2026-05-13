@@ -6,6 +6,7 @@ Initial scaffold for a Docker-based CV matching platform with:
 - FastAPI backend
 - PostgreSQL
 - Neo4j
+- AgentScope-ready screening/ranking workflow seam
 
 ## Prerequisites
 
@@ -95,7 +96,7 @@ DBeaver connects directly to the PostgreSQL container through the mapped host po
 The JD import pipeline supports a hybrid parser that combines:
 
 - `PyMuPDF` text extraction
-- `Tesseract OCR` fallback for scanned PDFs with no usable text layer
+- text-layer extraction for text-selectable PDFs only
 - backend section preprocessing
 - `OpenRouter` with a configurable OpenAI model
 - local taxonomy post-processing for graph-ready skill normalization
@@ -117,8 +118,8 @@ Notes:
 
 - `JD_PARSER_MODE=rule_based` keeps the previous local parser only
 - `JD_PARSER_MODE=hybrid` uses OpenRouter first, then falls back to rule-based parsing if enabled
-- scanned PDFs now try `Tesseract OCR` automatically when `PyMuPDF` text extraction returns no usable text
-- imported jobs also expose `extract_source` as `text_layer` or `ocr_fallback`
+- scanned or image-only PDFs are rejected early to keep imports fast and predictable
+- imported jobs expose `extract_source` as `text_layer`
 - imported jobs now include `parse_source` and `parse_confidence`
 - imported jobs now also include `graph_sync_status`, `graph_sync_error`, and `graph_synced_at`
 - the job workspace shows parser provenance so you can tell whether the output came from `llm_hybrid` or `rule_based_fallback`
@@ -131,7 +132,7 @@ Notes:
 The CV import pipeline now supports a hybrid parser that combines:
 
 - `PyMuPDF` text extraction
-- `Tesseract OCR` fallback for scanned PDFs with no usable text layer
+- text-layer extraction for text-selectable PDFs only
 - backend section preprocessing
 - `OpenRouter` with a configurable OpenAI model
 - local taxonomy post-processing for canonical skill mapping and graph projection
@@ -153,8 +154,8 @@ Notes:
 
 - `CV_PARSER_MODE=rule_based` keeps the previous local parser only
 - `CV_PARSER_MODE=hybrid` uses OpenRouter first, then falls back to `rule_based_fallback` if enabled
-- scanned CV PDFs now try `Tesseract OCR` automatically when `PyMuPDF` text extraction returns no usable text
-- imported candidates and batch results expose `extract_source` as `text_layer` or `ocr_fallback`
+- scanned or image-only CV PDFs are rejected early to keep batch imports fast and predictable
+- imported candidates and batch results expose `extract_source` as `text_layer`
 - imported candidates keep `parse_source`, `parse_confidence`, `graph_sync_status`, `graph_sync_error`, and `graph_synced_at`
 - candidate parsing remains evidence-aware, so each extracted skill keeps supporting snippets when available
 - candidate graph projection continues to reuse the same canonical skill taxonomy as JD imports
@@ -171,7 +172,7 @@ Notes:
 1. Start the stack with `make up`
 2. Run migrations with `make migrate`
 3. Open `http://localhost:3000/admin/jobs`
-4. Use `Import JD PDF` to upload a text-based or clearly scanned JD PDF
+4. Use `Import JD PDF` to upload a text-based JD PDF with selectable text
 5. Open the generated job with `Open Workspace`
 6. Check `Graph synced` status in the admin card or workspace metadata
 7. Inspect Neo4j Browser at `http://localhost:7474` if you want to verify graph projection
@@ -199,11 +200,53 @@ Notes:
 
 Current limitations:
 
-- OCR currently uses `English` only
-- low-quality scans may still fail if `Tesseract` cannot recover enough readable text
+- only text-selectable PDFs are supported for CV and JD import
+- scanned or image-only PDFs are rejected instead of running OCR to keep import latency low
 - production build verification should be run in an isolated container or image, not inside the mounted dev container sharing `.next`
 - candidates are currently owned by one job workspace and are not reused across multiple jobs
-- job-candidate matching, scoring, and explanation are not implemented yet
+- screening and ranking currently run through a deterministic-first workflow
+- AgentScope is wired as an optional seam for future Verifier/Matcher/Explainer/Critic orchestration, but the live demo path still uses deterministic verification and scoring for speed
+
+## Screening And Ranking Workflow
+
+1. Open a job workspace at `/jobs/[jobId]`
+2. Import one or more text-selectable CV PDFs
+3. Click `Run Screening & Ranking`
+4. The backend applies the demo policy:
+   - missing project/GitHub/portfolio link => reject
+   - unreachable project link => reject
+   - reachable project evidence => pass to ranking
+5. Verified candidates are ranked by:
+   - must-have coverage
+   - verified project evidence
+   - technical overlap
+   - experience signal
+   - evidence density
+6. The workspace shows:
+   - ranked candidates
+   - rejected candidates
+   - verification summary
+   - match summary
+
+### Optional AgentScope Review Layer
+
+Set the following in `.env` if you want verified candidates to pass through the
+AgentScope `Matcher -> Explainer -> Critic` review layer after deterministic
+verification and scoring:
+
+```env
+MATCHING_REVIEW_MODE=agentscope
+MATCHING_REVIEW_TIMEOUT_SECONDS=60
+OPENROUTER_API_KEY=your-key
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=openai/gpt-5.4-mini
+```
+
+Notes:
+
+- deterministic verification and ranking remain the source of truth
+- AgentScope currently enriches the HR-facing summary after a candidate passes verification
+- if AgentScope is enabled but the package or model credentials are unavailable, `POST /api/jobs/{jobId}/screen-and-rank` returns a clear `503`
 
 ## Make Targets
 

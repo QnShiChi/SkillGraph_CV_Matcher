@@ -30,14 +30,14 @@ def import_candidate_pdf(
     pdf_bytes = file.file.read()
     if not pdf_bytes:
         raise ValueError(
-            "Unable to extract readable text from CV. Please upload a text-based PDF or a clearly scanned PDF."
+            "Unable to extract readable text from CV. Please upload a text-based PDF with selectable text."
         )
 
     try:
         extracted = extract_pdf_text(pdf_bytes)
     except ValueError as error:
         raise ValueError(
-            "Unable to extract readable text from CV. Please upload a text-based PDF or a clearly scanned PDF."
+            "Unable to extract readable text from CV. Please upload a text-based PDF with selectable text."
         ) from error
 
     parsed = _parse_imported_candidate(

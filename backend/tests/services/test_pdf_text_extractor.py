@@ -45,18 +45,11 @@ def test_extract_pdf_text_uses_text_layer_when_available() -> None:
     assert "Senior Backend Engineer" in payload["raw_text"]
 
 
-def test_extract_pdf_text_falls_back_to_ocr(monkeypatch) -> None:
+def test_extract_pdf_text_rejects_scanned_pdf_without_text_layer() -> None:
     pdf_bytes = _make_image_pdf_bytes("Python FastAPI PostgreSQL Docker AWS")
-
-    monkeypatch.setattr(
-        "app.services.pdf_text_extractor.pytesseract.image_to_string",
-        lambda image, lang: (
-            "Python FastAPI PostgreSQL Docker AWS machine learning backend services "
-            "cloud deployment CI CD engineering systems"
-        ),
-    )
-
-    payload = extract_pdf_text(pdf_bytes)
-
-    assert payload["extract_source"] == "ocr_fallback"
-    assert "Python FastAPI PostgreSQL Docker AWS" in payload["raw_text"]
+    try:
+        extract_pdf_text(pdf_bytes)
+    except ValueError as error:
+        assert "text-based PDF" in str(error)
+    else:  # pragma: no cover - defensive assertion
+        raise AssertionError("Expected scanned PDF without text layer to be rejected.")

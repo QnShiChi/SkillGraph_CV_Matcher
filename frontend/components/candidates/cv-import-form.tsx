@@ -28,9 +28,9 @@ export function CvImportForm({
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <div className="rounded-[16px] bg-[rgba(148,151,169,0.08)] p-4 text-sm leading-6 text-[var(--color-muted)]">
-        Upload one or more text-based CV PDFs. Each file is parsed independently,
-        keeps its own evidence snippets, and syncs graph-safe skills to Neo4j without
-        blocking the rest of the batch.
+        Upload one or more text-based CV PDFs with selectable text. Each file is
+        parsed independently, keeps its own evidence snippets, and syncs graph-safe
+        skills to Neo4j without blocking the rest of the batch.
       </div>
 
       <div className="space-y-2">
@@ -51,7 +51,7 @@ export function CvImportForm({
         <p className="text-xs text-[var(--color-muted)]">
           {files.length > 0
             ? `${files.length} file${files.length > 1 ? "s" : ""} selected`
-            : "Select one or more PDF resumes."}
+            : "Select one or more text-based PDF resumes with selectable text."}
         </p>
       </div>
 

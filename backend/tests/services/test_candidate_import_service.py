@@ -3,6 +3,7 @@ from __future__ import annotations
 from io import BytesIO
 
 import fitz
+from PIL import Image, ImageDraw
 from fastapi import UploadFile
 from starlette.datastructures import Headers
 
@@ -70,6 +71,28 @@ def _make_upload_file(text: str) -> UploadFile:
     return UploadFile(
         file=BytesIO(pdf_bytes),
         filename="candidate.pdf",
+        headers=Headers({"content-type": "application/pdf"}),
+    )
+
+
+def _make_image_pdf_upload_file(text: str) -> UploadFile:
+    image = Image.new("RGB", (1400, 1800), "white")
+    draw = ImageDraw.Draw(image)
+    draw.text((80, 80), text, fill="black")
+
+    image_buffer = BytesIO()
+    image.save(image_buffer, format="PNG")
+    image_bytes = image_buffer.getvalue()
+
+    document = fitz.open()
+    page = document.new_page(width=900, height=1200)
+    page.insert_image(page.rect, stream=image_bytes)
+    pdf_bytes = document.tobytes()
+    document.close()
+
+    return UploadFile(
+        file=BytesIO(pdf_bytes),
+        filename="scanned-candidate.pdf",
         headers=Headers({"content-type": "application/pdf"}),
     )
 
@@ -311,25 +334,20 @@ def test_import_candidates_bulk_continues_when_one_file_fails(session, monkeypat
     )
 
 
-def test_import_candidate_pdf_marks_ocr_fallback_extract_source(session, monkeypatch) -> None:
+def test_import_candidate_pdf_rejects_scanned_pdf_without_text_layer(session) -> None:
     job = _create_job(session)
-    upload = _make_upload_file(
-        "Nguyen Van A\nSummary\nPython engineer\nExperience\nBuilt FastAPI systems."
+    upload = _make_image_pdf_upload_file(
+        "Nguyen Van A Python engineer Built FastAPI systems on PostgreSQL and AWS with Docker."
     )
 
-    monkeypatch.setattr(
-        "app.services.candidate_import_service.extract_pdf_text",
-        lambda pdf_bytes: {
-            "raw_text": "Nguyen Van A Python engineer Built FastAPI systems on PostgreSQL and AWS with Docker.",
-            "extract_source": "ocr_fallback",
-        },
-    )
-
-    candidate = import_candidate_pdf(
-        session,
-        upload,
-        job_id=job.id,
-        settings=_make_settings(cv_parser_mode="rule_based"),
-    )
-
-    assert candidate.extract_source == "ocr_fallback"
+    try:
+        import_candidate_pdf(
+            session,
+            upload,
+            job_id=job.id,
+            settings=_make_settings(cv_parser_mode="rule_based"),
+        )
+    except ValueError as error:
+        assert "text-based PDF" in str(error)
+    else:  # pragma: no cover - defensive assertion
+        raise AssertionError("Expected scanned CV PDF without text layer to be rejected.")

@@ -10,10 +10,19 @@ from app.repositories.job_repository import (
     update_job,
 )
 from app.repositories.candidate_repository import list_candidates_for_job
-from app.schemas.candidate import CandidateBulkImportResponse, CandidateRead
+from app.schemas.candidate import (
+    CandidateBulkImportResponse,
+    CandidateRankingResponse,
+    CandidateRead,
+)
 from app.schemas.job import JobCreate, JobRead, JobUpdate
 from app.services.job_import_service import import_job_pdf
 from app.services.candidate_import_service import import_candidate_pdf, import_candidates_bulk
+from app.services.candidate_screening_service import (
+    get_job_candidate_ranking,
+    screen_and_rank_job_candidates,
+)
+from app.services.agentscope_runner import AgentScopeUnavailableError
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -70,6 +79,38 @@ def get_job_candidates(job_id: int, session: Session = Depends(get_db_session)) 
         )
 
     return list_candidates_for_job(session, job_id)
+
+
+@router.get("/{job_id}/ranking", response_model=CandidateRankingResponse)
+def get_job_ranking(job_id: int, session: Session = Depends(get_db_session)) -> CandidateRankingResponse:
+    job = get_job_by_id(session, job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found.",
+        )
+
+    return CandidateRankingResponse(**get_job_candidate_ranking(session, job_id=job_id))
+
+
+@router.post("/{job_id}/screen-and-rank", response_model=CandidateRankingResponse)
+def screen_and_rank_job(job_id: int, session: Session = Depends(get_db_session)) -> CandidateRankingResponse:
+    job = get_job_by_id(session, job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found.",
+        )
+
+    try:
+        result = screen_and_rank_job_candidates(session, job_id=job_id)
+    except AgentScopeUnavailableError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(error),
+        ) from error
+
+    return CandidateRankingResponse(**result)
 
 
 @router.post("/{job_id}/candidates/import", response_model=CandidateRead, status_code=status.HTTP_201_CREATED)

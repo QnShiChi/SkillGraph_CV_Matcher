@@ -3,6 +3,7 @@ from __future__ import annotations
 from io import BytesIO
 
 import fitz
+from PIL import Image, ImageDraw
 from fastapi import UploadFile
 from starlette.datastructures import Headers
 
@@ -63,6 +64,28 @@ def _make_upload_file(text: str) -> UploadFile:
     return UploadFile(
         file=BytesIO(pdf_bytes),
         filename="jd.pdf",
+        headers=Headers({"content-type": "application/pdf"}),
+    )
+
+
+def _make_image_pdf_upload_file(text: str) -> UploadFile:
+    image = Image.new("RGB", (1400, 1800), "white")
+    draw = ImageDraw.Draw(image)
+    draw.text((80, 80), text, fill="black")
+
+    image_buffer = BytesIO()
+    image.save(image_buffer, format="PNG")
+    image_bytes = image_buffer.getvalue()
+
+    document = fitz.open()
+    page = document.new_page(width=900, height=1200)
+    page.insert_image(page.rect, stream=image_bytes)
+    pdf_bytes = document.tobytes()
+    document.close()
+
+    return UploadFile(
+        file=BytesIO(pdf_bytes),
+        filename="scanned-jd.pdf",
         headers=Headers({"content-type": "application/pdf"}),
     )
 
@@ -191,23 +214,18 @@ def test_import_job_pdf_keeps_job_when_graph_sync_fails(session, monkeypatch) ->
     assert job.graph_synced_at is None
 
 
-def test_import_job_pdf_marks_ocr_fallback_extract_source(session, monkeypatch) -> None:
-    upload = _make_upload_file(
-        "Senior Backend Engineer\n\nRequired Skills\nPython\nFastAPI\nPostgreSQL"
+def test_import_job_pdf_rejects_scanned_pdf_without_text_layer(session) -> None:
+    upload = _make_image_pdf_upload_file(
+        "Senior Backend Engineer Required Skills Python FastAPI PostgreSQL"
     )
 
-    monkeypatch.setattr(
-        "app.services.job_import_service.extract_pdf_text",
-        lambda pdf_bytes: {
-            "raw_text": "Senior Backend Engineer Required Skills Python FastAPI PostgreSQL",
-            "extract_source": "ocr_fallback",
-        },
-    )
-
-    job = import_job_pdf(
-        session,
-        upload,
-        settings=_make_settings(jd_parser_mode="rule_based"),
-    )
-
-    assert job.extract_source == "ocr_fallback"
+    try:
+        import_job_pdf(
+            session,
+            upload,
+            settings=_make_settings(jd_parser_mode="rule_based"),
+        )
+    except ValueError as error:
+        assert "text-based PDF" in str(error)
+    else:  # pragma: no cover - defensive assertion
+        raise AssertionError("Expected scanned JD PDF without text layer to be rejected.")

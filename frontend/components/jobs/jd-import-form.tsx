@@ -28,8 +28,8 @@ export function JdImportForm({
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <div className="rounded-[16px] bg-[rgba(148,151,169,0.08)] p-4 text-sm leading-6 text-[var(--color-muted)]">
-        Upload a text-based JD PDF. Scanned PDFs are not supported in this phase,
-        and the system will reject unreadable files.
+        Upload a text-based JD PDF with selectable text. Scanned PDFs are not
+        supported in this phase, and the system will reject unreadable files.
       </div>
 
       <div className="space-y-2">

@@ -9,5 +9,5 @@ email-validator==2.2.0
 PyMuPDF==1.26.0
 python-multipart==0.0.20
 httpx==0.28.1
-pytesseract==0.3.13
 Pillow==11.2.1
+agentscope==1.0.19.post1

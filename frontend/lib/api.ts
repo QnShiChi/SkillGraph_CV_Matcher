@@ -47,6 +47,21 @@ export type Candidate = {
   graph_sync_status: "pending" | "synced" | "failed";
   graph_sync_error: string | null;
   graph_synced_at: string | null;
+  verification_status:
+    | "verified"
+    | "weak_evidence"
+    | "missing_evidence"
+    | "invalid_link"
+    | null;
+  verification_score: number | null;
+  verification_summary: string | null;
+  verified_links_json: Array<Record<string, unknown>> | null;
+  screening_decision: "pass" | "reject" | null;
+  screening_reason: string | null;
+  match_score: number | null;
+  match_rank: number | null;
+  match_summary: string | null;
+  final_report_json: Record<string, unknown> | null;
   structured_cv_json: Record<string, unknown> | null;
   status: string;
   created_at: string;
@@ -70,6 +85,14 @@ export type CandidateBulkImportResponse = {
   success_count: number;
   failed_count: number;
   results: CandidateBulkImportItem[];
+};
+
+export type CandidateRankingResponse = {
+  total_candidates: number;
+  ranked_count: number;
+  rejected_count: number;
+  ranked_candidates: Candidate[];
+  rejected_candidates: Candidate[];
 };
 
 export type JobInput = {
@@ -177,6 +200,22 @@ export async function getJobCandidates(jobId: number): Promise<Candidate[]> {
   }
 }
 
+export async function getJobRanking(jobId: number): Promise<CandidateRankingResponse | null> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/jobs/${jobId}/ranking`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as CandidateRankingResponse;
+  } catch {
+    return null;
+  }
+}
+
 export async function createJob(payload: JobInput): Promise<Job> {
   const response = await fetch(`${getApiBaseUrl()}/api/jobs`, {
     method: "POST",
@@ -279,6 +318,23 @@ export async function importJobCandidatesBulk(
   }
 
   return (await response.json()) as CandidateBulkImportResponse;
+}
+
+export async function screenAndRankJobCandidates(
+  jobId: number,
+): Promise<CandidateRankingResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/api/jobs/${jobId}/screen-and-rank`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { detail?: string }
+      | null;
+    throw new Error(payload?.detail ?? "Unable to screen and rank candidates for this job.");
+  }
+
+  return (await response.json()) as CandidateRankingResponse;
 }
 
 export async function updateCandidate(

@@ -11,6 +11,13 @@ CandidateParseStatus = Literal["processed", "failed"]
 CandidateParseSource = Literal["manual", "rule_based", "llm_hybrid", "rule_based_fallback"]
 CandidateGraphSyncStatus = Literal["pending", "synced", "failed"]
 CandidateImportItemStatus = Literal["imported", "failed"]
+CandidateVerificationStatus = Literal[
+    "verified",
+    "weak_evidence",
+    "missing_evidence",
+    "invalid_link",
+]
+CandidateScreeningDecision = Literal["pass", "reject"]
 
 
 class CandidateCreate(BaseModel):
@@ -47,6 +54,16 @@ class CandidateRead(BaseModel):
     graph_sync_status: CandidateGraphSyncStatus
     graph_sync_error: str | None
     graph_synced_at: datetime | None
+    verification_status: CandidateVerificationStatus | None
+    verification_score: float | None
+    verification_summary: str | None
+    verified_links_json: list[dict[str, Any]] | None
+    screening_decision: CandidateScreeningDecision | None
+    screening_reason: str | None
+    match_score: float | None
+    match_rank: int | None
+    match_summary: str | None
+    final_report_json: dict[str, Any] | None
     structured_cv_json: dict[str, Any] | None
     status: CandidateStatus
     created_at: datetime
@@ -70,3 +87,11 @@ class CandidateBulkImportResponse(BaseModel):
     success_count: int
     failed_count: int
     results: list[CandidateBulkImportItem]
+
+
+class CandidateRankingResponse(BaseModel):
+    total_candidates: int
+    ranked_count: int
+    rejected_count: int
+    ranked_candidates: list[CandidateRead]
+    rejected_candidates: list[CandidateRead]

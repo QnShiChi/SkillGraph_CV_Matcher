@@ -105,7 +105,7 @@ Set the following in `.env` to enable it:
 ```env
 OPENROUTER_API_KEY=your-key
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_MODEL=openai/gpt-5.5
+OPENROUTER_MODEL=openai/gpt-5.4-mini
 JD_PARSER_MODE=hybrid
 JD_PARSER_TEMPERATURE=0.1
 JD_PARSER_MAX_OUTPUT_TOKENS=12000
@@ -141,7 +141,7 @@ Set the following in `.env` to enable it:
 ```env
 OPENROUTER_API_KEY=your-key
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_MODEL=openai/gpt-5.5
+OPENROUTER_MODEL=openai/gpt-5.4-mini
 CV_PARSER_MODE=hybrid
 CV_PARSER_TEMPERATURE=0.1
 CV_PARSER_MAX_OUTPUT_TOKENS=12000

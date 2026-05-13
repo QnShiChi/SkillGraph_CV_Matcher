@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { Candidate } from "@/lib/api";
 
 import { StateCard } from "@/components/state-card";
@@ -101,6 +103,14 @@ export function CandidateList({
               </p>
             </div>
             <div className="flex gap-2">
+              {candidate.job_id ? (
+                <Link
+                  href={`/jobs/${candidate.job_id}`}
+                  className="rounded-[12px] bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white"
+                >
+                  Open Job
+                </Link>
+              ) : null}
               <button
                 type="button"
                 onClick={() => onEdit(candidate)}
@@ -111,7 +121,8 @@ export function CandidateList({
               <button
                 type="button"
                 onClick={() => onDelete(candidate)}
-                className="rounded-[12px] bg-[#101114] px-4 py-2 text-sm font-medium text-white"
+                disabled={Boolean(candidate.job_id)}
+                className="rounded-[12px] bg-[#101114] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[rgba(16,17,20,0.2)]"
               >
                 Delete
               </button>
@@ -164,6 +175,7 @@ export function CandidateList({
             ) : null}
             <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
               <span>Source {candidate.source_type}</span>
+              {candidate.job_id ? <span>Owned by job {candidate.job_id}</span> : <span>Global candidate</span>}
               {candidate.extract_source ? <span>Extract {candidate.extract_source}</span> : null}
               <span>Parse {candidate.parse_status}</span>
               <span>Engine {candidate.parse_source}</span>
@@ -174,6 +186,11 @@ export function CandidateList({
             {candidate.graph_sync_status === "failed" && candidate.graph_sync_error ? (
               <p className="text-xs leading-5 text-[#8b2d2d]">
                 Graph sync error: {candidate.graph_sync_error}
+              </p>
+            ) : null}
+            {candidate.job_id ? (
+              <p className="text-xs leading-5 text-[var(--color-muted)]">
+                This candidate belongs to job workspace {candidate.job_id}. Delete it from that workspace to avoid accidental data loss.
               </p>
             ) : null}
           </div>

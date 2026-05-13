@@ -3,13 +3,19 @@
 import { useState } from "react";
 
 import { CvImportForm } from "@/components/candidates/cv-import-form";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { StateCard } from "@/components/state-card";
 import {
   type Candidate,
   type CandidateBulkImportResponse,
+  deleteCandidate,
   getJobCandidates,
   importJobCandidatesBulk,
 } from "@/lib/api";
+
+function normalizeCandidates(value: Candidate[] | null | undefined): Candidate[] {
+  return Array.isArray(value) ? value : [];
+}
 
 function formatConfidence(value: number | null) {
   if (value == null) {
@@ -38,20 +44,24 @@ export function JobCandidatePanel({
   jobId: number;
   initialCandidates: Candidate[];
 }) {
-  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
+  const [candidates, setCandidates] = useState<Candidate[]>(
+    normalizeCandidates(initialCandidates),
+  );
   const [lastImportResult, setLastImportResult] =
     useState<CandidateBulkImportResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Candidate | null>(null);
 
-  const sortedCandidates = [...candidates].sort(
+  const sortedCandidates = [...normalizeCandidates(candidates)].sort(
     (left, right) =>
       new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
   );
 
   async function refreshCandidates() {
     const nextCandidates = await getJobCandidates(jobId);
-    setCandidates(nextCandidates);
+    setCandidates(normalizeCandidates(nextCandidates));
   }
 
   async function handleImport(files: File[]) {
@@ -68,6 +78,29 @@ export function JobCandidatePanel({
       );
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setErrorMessage(null);
+
+    try {
+      await deleteCandidate(deleteTarget.id);
+      setCandidates((current) =>
+        normalizeCandidates(current).filter((candidate) => candidate.id !== deleteTarget.id),
+      );
+      setDeleteTarget(null);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to delete candidate from this job.",
+      );
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -148,6 +181,16 @@ export function JobCandidatePanel({
                     </span>
                   </div>
 
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(candidate)}
+                      className="rounded-[12px] bg-[#101114] px-4 py-2 text-sm font-medium text-white"
+                    >
+                      Delete Candidate
+                    </button>
+                  </div>
+
                   <div className="mt-4 space-y-2 text-sm leading-6 text-[var(--color-muted)]">
                     <p>Technical: {technicalSkills.map((skill) => skill.name).join(", ") || "None"}</p>
                     <p>Cloud: {cloudSkills.map((skill) => skill.name).join(", ") || "None"}</p>
@@ -164,6 +207,23 @@ export function JobCandidatePanel({
           </div>
         )}
       </StateCard>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete candidate from this job?"
+        description={
+          deleteTarget
+            ? `This will permanently remove "${deleteTarget.full_name}" from PostgreSQL, this job workspace, and the candidate graph projection.`
+            : ""
+        }
+        confirmLabel={isDeleting ? "Deleting..." : "Delete Candidate"}
+        onCancel={() => {
+          if (!isDeleting) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

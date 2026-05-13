@@ -17,6 +17,10 @@ import {
   updateCandidate,
 } from "@/lib/api";
 
+function normalizeCandidates(value: Candidate[] | null | undefined): Candidate[] {
+  return Array.isArray(value) ? value : [];
+}
+
 type DrawerState =
   | { open: false; mode: "create"; candidate?: undefined }
   | { open: true; mode: "create"; candidate?: undefined }
@@ -27,7 +31,9 @@ export function CandidateAdminClient({
 }: {
   initialCandidates: Candidate[];
 }) {
-  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
+  const [candidates, setCandidates] = useState<Candidate[]>(
+    normalizeCandidates(initialCandidates),
+  );
   const [drawerState, setDrawerState] = useState<DrawerState>({
     open: false,
     mode: "create",
@@ -38,7 +44,7 @@ export function CandidateAdminClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const sortedCandidates = [...candidates].sort(
+  const sortedCandidates = [...normalizeCandidates(candidates)].sort(
     (left, right) =>
       new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
   );
@@ -93,6 +99,14 @@ export function CandidateAdminClient({
 
   async function handleDelete() {
     if (!deleteTarget) {
+      return;
+    }
+
+    if (deleteTarget.job_id) {
+      setListError(
+        `Candidate "${deleteTarget.full_name}" belongs to job ${deleteTarget.job_id}. Delete it from that job workspace instead.`,
+      );
+      setDeleteTarget(null);
       return;
     }
 
@@ -180,10 +194,18 @@ export function CandidateAdminClient({
         title="Delete candidate permanently?"
         description={
           deleteTarget
-            ? `This will permanently remove "${deleteTarget.full_name}" from PostgreSQL.`
+            ? deleteTarget.job_id
+              ? `"${deleteTarget.full_name}" belongs to job ${deleteTarget.job_id} and cannot be deleted from Admin Candidates.`
+              : `This will permanently remove "${deleteTarget.full_name}" from PostgreSQL.`
             : ""
         }
-        confirmLabel={isDeleting ? "Deleting..." : "Delete Candidate"}
+        confirmLabel={
+          deleteTarget?.job_id
+            ? "Delete in Job Workspace"
+            : isDeleting
+              ? "Deleting..."
+              : "Delete Candidate"
+        }
         onCancel={() => {
           if (!isDeleting) {
             setDeleteTarget(null);

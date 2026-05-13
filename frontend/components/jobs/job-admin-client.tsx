@@ -19,13 +19,17 @@ import {
   updateJob,
 } from "@/lib/api";
 
+function normalizeJobs(value: Job[] | null | undefined): Job[] {
+  return Array.isArray(value) ? value : [];
+}
+
 type DrawerState =
   | { open: false; mode: "create"; job?: undefined }
   | { open: true; mode: "create"; job?: undefined }
   | { open: true; mode: "edit"; job: Job };
 
 export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
+  const [jobs, setJobs] = useState<Job[]>(normalizeJobs(initialJobs));
   const [drawerState, setDrawerState] = useState<DrawerState>({
     open: false,
     mode: "create",
@@ -38,7 +42,7 @@ export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  const sortedJobs = [...jobs].sort(
+  const sortedJobs = [...normalizeJobs(jobs)].sort(
     (left, right) =>
       new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
   );

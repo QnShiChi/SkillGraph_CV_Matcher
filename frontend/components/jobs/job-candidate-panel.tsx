@@ -1,10 +1,13 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
 
 import { CvImportForm } from "@/components/candidates/cv-import-form";
+import { CandidateListItem } from "@/components/jobs/candidate-list-item";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { StateCard } from "@/components/state-card";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import {
   type Candidate,
   type CandidateBulkImportResponse,
@@ -15,6 +18,14 @@ import {
   importJobCandidatesBulk,
   screenAndRankJobCandidates,
 } from "@/lib/api";
+import {
+  expandedCandidateIdsKey,
+  openCandidateSectionsKey,
+  readSessionValue,
+  writeSessionValue,
+} from "@/lib/job-workspace-ui-state";
+
+type CandidateSectionKey = "ranked" | "rejected" | "imported";
 
 function normalizeCandidates(value: Candidate[] | null | undefined): Candidate[] {
   return Array.isArray(value) ? value : [];
@@ -58,6 +69,39 @@ function readVerifiedLinks(candidate: Candidate) {
   }>;
 }
 
+function renderVerifiedLinks(
+  verifiedLinks: ReturnType<typeof readVerifiedLinks>,
+  title: string,
+) {
+  if (!verifiedLinks.length) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-[14px] border border-[var(--color-border)] bg-[rgba(148,151,169,0.05)] px-4 py-3">
+      <p className="font-medium text-[var(--color-text)]">{title}</p>
+      <div className="mt-2 space-y-2 text-sm leading-6 text-[var(--color-muted)]">
+        {verifiedLinks.map((link, index) => (
+          <div key={`${link.final_url ?? link.url ?? title}-${index}`}>
+            <p>
+              {(link.claim_title ?? link.final_url ?? link.url ?? "Project link")} ·{" "}
+              {link.claim_match_status ?? "unchecked"} · score{" "}
+              {link.claim_match_score ?? "N/A"}
+            </p>
+            {link.fetched_title ? <p>Fetched title: {link.fetched_title}</p> : null}
+            {Array.isArray(link.matched_terms) && link.matched_terms.length > 0 ? (
+              <p>Matched terms: {link.matched_terms.join(", ")}</p>
+            ) : null}
+            {link.final_url ?? link.url ? <p>{link.final_url ?? link.url}</p> : null}
+            {link.fetched_excerpt ? <p>Excerpt: {link.fetched_excerpt}</p> : null}
+            {link.mismatch_notes ? <p>Mismatch: {link.mismatch_notes}</p> : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function JobCandidatePanel({
   jobId,
   initialCandidates,
@@ -76,16 +120,76 @@ export function JobCandidatePanel({
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Candidate | null>(null);
+  const [openSections, setOpenSections] = useState<CandidateSectionKey[]>([
+    "ranked",
+  ]);
+  const [expandedRankedIds, setExpandedRankedIds] = useState<number[]>([]);
+  const [expandedRejectedIds, setExpandedRejectedIds] = useState<number[]>([]);
+  const [expandedImportedIds, setExpandedImportedIds] = useState<number[]>([]);
 
   const sortedCandidates = [...normalizeCandidates(candidates)].sort(
     (left, right) =>
       new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
   );
 
+  function toggleSection(section: CandidateSectionKey) {
+    setOpenSections((current) =>
+      current.includes(section)
+        ? current.filter((item) => item !== section)
+        : [...current, section],
+    );
+  }
+
+  function toggleExpandedId(
+    id: number,
+    setter: Dispatch<SetStateAction<number[]>>,
+  ) {
+    setter((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
+    );
+  }
+
   async function refreshCandidates() {
     const nextCandidates = await getJobCandidates(jobId);
     setCandidates(normalizeCandidates(nextCandidates));
   }
+
+  useEffect(() => {
+    setOpenSections(readSessionValue(openCandidateSectionsKey(jobId), ["ranked"]));
+    setExpandedRankedIds(
+      readSessionValue(expandedCandidateIdsKey(jobId, "ranked"), []),
+    );
+    setExpandedRejectedIds(
+      readSessionValue(expandedCandidateIdsKey(jobId, "rejected"), []),
+    );
+    setExpandedImportedIds(
+      readSessionValue(expandedCandidateIdsKey(jobId, "imported"), []),
+    );
+  }, [jobId]);
+
+  useEffect(() => {
+    writeSessionValue(openCandidateSectionsKey(jobId), openSections);
+  }, [jobId, openSections]);
+
+  useEffect(() => {
+    writeSessionValue(expandedCandidateIdsKey(jobId, "ranked"), expandedRankedIds);
+  }, [expandedRankedIds, jobId]);
+
+  useEffect(() => {
+    writeSessionValue(
+      expandedCandidateIdsKey(jobId, "rejected"),
+      expandedRejectedIds,
+    );
+  }, [expandedRejectedIds, jobId]);
+
+  useEffect(() => {
+    writeSessionValue(
+      expandedCandidateIdsKey(jobId, "imported"),
+      expandedImportedIds,
+    );
+  }, [expandedImportedIds, jobId]);
 
   useEffect(() => {
     let active = true;
@@ -243,107 +347,15 @@ export function JobCandidatePanel({
         </StateCard>
       ) : null}
 
-      <StateCard
-        title="Imported Candidates"
-        description="These candidates belong only to the current job workspace and are ready for screening, ranking, and HR review."
+      <CollapsibleSection
+        title="Ranked Candidates"
+        description="Only candidates with verified project evidence appear here."
+        count={rankingResult?.ranked_candidates.length ?? 0}
+        open={openSections.includes("ranked")}
+        onToggle={() => toggleSection("ranked")}
       >
-        {sortedCandidates.length === 0 ? (
-          <p className="text-sm leading-6 text-[var(--color-muted)]">
-            No candidates imported for this job yet.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {sortedCandidates.map((candidate) => {
-              const structured = readStructuredCandidate(candidate);
-              const verifiedLinks = readVerifiedLinks(candidate);
-              const technicalSkills = structured?.technical_skills ?? [];
-              const cloudSkills = structured?.platforms_cloud ?? [];
-              const toolingSkills = structured?.tooling_devops ?? [];
-              const topEvidence =
-                technicalSkills.find((skill) => skill.evidence?.length)?.evidence?.[0] ?? null;
-
-              return (
-                <article
-                  key={candidate.id}
-                  className="rounded-[20px] border border-[var(--color-border)] bg-white/90 p-5"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-                        {candidate.full_name}
-                      </h3>
-                      <p className="mt-2 text-sm text-[var(--color-muted)]">
-                        {candidate.extract_source ?? "manual"} · {candidate.parse_source} · confidence {formatConfidence(candidate.parse_confidence)} · graph {candidate.graph_sync_status}
-                      </p>
-                      {(candidate.screening_decision || candidate.match_rank != null) ? (
-                        <p className="mt-2 text-sm text-[var(--color-muted)]">
-                          verify {candidate.verification_status ?? "pending"} · decision {candidate.screening_decision ?? "pending"} · match score {candidate.match_score == null ? "N/A" : candidate.match_score.toFixed(2)} · rank {candidate.match_rank ?? "N/A"}
-                        </p>
-                      ) : null}
-                    </div>
-                    <span className="rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
-                      {candidate.status}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setDeleteTarget(candidate)}
-                      className="rounded-[12px] bg-[#101114] px-4 py-2 text-sm font-medium text-white"
-                    >
-                      Delete Candidate
-                    </button>
-                  </div>
-
-                  <div className="mt-4 space-y-2 text-sm leading-6 text-[var(--color-muted)]">
-                    <p>Technical: {technicalSkills.map((skill) => skill.name).join(", ") || "None"}</p>
-                    <p>Cloud: {cloudSkills.map((skill) => skill.name).join(", ") || "None"}</p>
-                    <p>Tooling: {toolingSkills.map((skill) => skill.name).join(", ") || "None"}</p>
-                    {candidate.verification_summary ? (
-                      <p>Verification: {candidate.verification_summary}</p>
-                    ) : null}
-                    {candidate.match_summary ? <p>Match: {candidate.match_summary}</p> : null}
-                    {verifiedLinks.length > 0 ? (
-                      <div className="rounded-[14px] border border-[var(--color-border)] bg-[rgba(148,151,169,0.05)] px-4 py-3">
-                        <p className="font-medium text-[var(--color-text)]">Verified Links</p>
-                        <div className="mt-2 space-y-2">
-                          {verifiedLinks.map((link, index) => (
-                            <div key={`${link.final_url ?? link.url ?? "link"}-${index}`}>
-                              <p>
-                                {(link.final_url ?? link.url) || "Unknown link"} · {link.claim_match_status ?? "unchecked"} · score {link.claim_match_score ?? "N/A"}
-                              </p>
-                              {link.claim_title ? <p>Claim: {link.claim_title}</p> : null}
-                              {link.fetched_title ? <p>Fetched title: {link.fetched_title}</p> : null}
-                              {Array.isArray(link.matched_terms) && link.matched_terms.length > 0 ? (
-                                <p>Matched terms: {link.matched_terms.join(", ")}</p>
-                              ) : null}
-                              {link.fetched_excerpt ? <p>Excerpt: {link.fetched_excerpt}</p> : null}
-                              {link.mismatch_notes ? <p>Mismatch: {link.mismatch_notes}</p> : null}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                    {topEvidence ? (
-                      <p>
-                        Evidence: {topEvidence.text} <span className="uppercase tracking-[0.14em]">({topEvidence.section_origin})</span>
-                      </p>
-                    ) : null}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </StateCard>
-
-      {rankingResult?.ranked_candidates.length ? (
-        <StateCard
-          title="Ranked Candidates"
-          description="Only candidates with verified project evidence appear here."
-        >
-          <div className="space-y-4">
+        {rankingResult?.ranked_candidates.length ? (
+          <div className="space-y-3">
             {rankingResult.ranked_candidates.map((candidate) => {
               const verifiedLinks = readVerifiedLinks(candidate);
               const report =
@@ -352,118 +364,179 @@ export function JobCandidatePanel({
                       strengths?: string[];
                       gaps?: string[];
                       explanation?: string;
+                      critic_review?: string;
                     })
                   : null;
 
               return (
-                <article
+                <CandidateListItem
                   key={`ranked-${candidate.id}`}
-                  className="rounded-[20px] border border-[var(--color-border)] bg-white/90 p-5"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-                        #{candidate.match_rank} · {candidate.full_name}
-                      </h3>
-                      <p className="mt-2 text-sm text-[var(--color-muted)]">
-                        match {candidate.match_score == null ? "N/A" : candidate.match_score.toFixed(2)} · verify {candidate.verification_score == null ? "N/A" : candidate.verification_score.toFixed(0)}
-                      </p>
-                    </div>
+                  tone="success"
+                  title={`#${candidate.match_rank} · ${candidate.full_name}`}
+                  subtitle={`match ${candidate.match_score == null ? "N/A" : candidate.match_score.toFixed(2)} · verify ${candidate.verification_score == null ? "N/A" : candidate.verification_score.toFixed(0)}`}
+                  summary={report?.explanation ?? candidate.match_summary ?? undefined}
+                  open={expandedRankedIds.includes(candidate.id)}
+                  onToggle={() => toggleExpandedId(candidate.id, setExpandedRankedIds)}
+                  badges={
                     <span className="rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
                       pass
                     </span>
-                  </div>
-                  {report?.explanation ? (
-                    <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">{report.explanation}</p>
-                  ) : null}
-                  <div className="mt-3 space-y-2 text-sm leading-6 text-[var(--color-muted)]">
-                    <p>Strengths: {report?.strengths?.join(", ") || "None"}</p>
-                    <p>Gaps: {report?.gaps?.join(", ") || "None"}</p>
-                    {verifiedLinks.length > 0 ? (
-                      <div className="rounded-[14px] border border-[var(--color-border)] bg-[rgba(148,151,169,0.05)] px-4 py-3">
-                        <p className="font-medium text-[var(--color-text)]">Project Verification</p>
-                        <div className="mt-2 space-y-2">
-                          {verifiedLinks.map((link, index) => (
-                            <div key={`${link.final_url ?? link.url ?? "rank-link"}-${index}`}>
-                              <p>
-                                {(link.claim_title ?? "Project link")} · {link.claim_match_status ?? "unchecked"} · score {link.claim_match_score ?? "N/A"}
-                              </p>
-                              {link.fetched_title ? <p>Fetched title: {link.fetched_title}</p> : null}
-                              {Array.isArray(link.matched_terms) && link.matched_terms.length > 0 ? (
-                                <p>Matched terms: {link.matched_terms.join(", ")}</p>
-                              ) : null}
-                              <p>{link.final_url ?? link.url}</p>
-                              {link.fetched_excerpt ? <p>Excerpt: {link.fetched_excerpt}</p> : null}
-                              {link.mismatch_notes ? <p>Mismatch: {link.mismatch_notes}</p> : null}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </article>
+                  }
+                  detail={
+                    <div className="space-y-3 text-sm leading-6 text-[var(--color-muted)]">
+                      <p>Strengths: {report?.strengths?.join(", ") || "None"}</p>
+                      <p>Gaps: {report?.gaps?.join(", ") || "None"}</p>
+                      {typeof report?.critic_review === "string" ? (
+                        <p>Critic review: {report.critic_review}</p>
+                      ) : null}
+                      {renderVerifiedLinks(verifiedLinks, "Project Verification")}
+                    </div>
+                  }
+                />
               );
             })}
           </div>
-        </StateCard>
-      ) : null}
+        ) : (
+          <p className="text-sm leading-6 text-[var(--color-muted)]">
+            No ranked candidates yet. Run screening and ranking after importing CVs.
+          </p>
+        )}
+      </CollapsibleSection>
 
-      {rankingResult?.rejected_candidates.length ? (
-        <StateCard
-          title="Rejected By Verification"
-          description="These candidates were filtered out before ranking because they lacked project evidence or the reachable links did not support the project claims in the CV."
-        >
-          <div className="space-y-4">
+      <CollapsibleSection
+        title="Rejected By Verification"
+        description="These candidates were filtered out before ranking because they lacked project evidence or the reachable links did not support the project claims in the CV."
+        count={rankingResult?.rejected_candidates.length ?? 0}
+        open={openSections.includes("rejected")}
+        onToggle={() => toggleSection("rejected")}
+      >
+        {rankingResult?.rejected_candidates.length ? (
+          <div className="space-y-3">
             {rankingResult.rejected_candidates.map((candidate) => {
               const verifiedLinks = readVerifiedLinks(candidate);
 
               return (
-                <article
+                <CandidateListItem
                   key={`rejected-${candidate.id}`}
-                  className="rounded-[20px] border border-[rgba(183,54,54,0.18)] bg-[rgba(183,54,54,0.05)] p-5"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-                        {candidate.full_name}
-                      </h3>
-                      <p className="mt-2 text-sm text-[var(--color-muted)]">
-                        {candidate.verification_status ?? "unverified"} · {candidate.screening_reason ?? "Rejected by screening policy."}
-                      </p>
-                    </div>
+                  tone="danger"
+                  title={candidate.full_name}
+                  subtitle={`${candidate.verification_status ?? "unverified"} · ${candidate.screening_reason ?? "Rejected by screening policy."}`}
+                  summary={candidate.verification_summary ?? undefined}
+                  open={expandedRejectedIds.includes(candidate.id)}
+                  onToggle={() =>
+                    toggleExpandedId(candidate.id, setExpandedRejectedIds)
+                  }
+                  badges={
                     <span className="rounded-full bg-[rgba(183,54,54,0.14)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#8d2020]">
                       reject
                     </span>
-                  </div>
-                  {candidate.verification_summary ? (
-                    <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
-                      {candidate.verification_summary}
-                    </p>
-                  ) : null}
-                  {verifiedLinks.length > 0 ? (
-                    <div className="mt-3 space-y-2 text-sm leading-6 text-[var(--color-muted)]">
-                      {verifiedLinks.map((link, index) => (
-                        <div key={`${link.final_url ?? link.url ?? "rejected-link"}-${index}`}>
-                          <p>
-                            {(link.claim_title ?? "Project link")} · {link.claim_match_status ?? "unchecked"} · score {link.claim_match_score ?? "N/A"}
-                          </p>
-                          {link.fetched_title ? <p>Fetched title: {link.fetched_title}</p> : null}
-                          {Array.isArray(link.matched_terms) && link.matched_terms.length > 0 ? (
-                            <p>Matched terms: {link.matched_terms.join(", ")}</p>
-                          ) : null}
-                          <p>{link.final_url ?? link.url}</p>
-                          {link.fetched_excerpt ? <p>Excerpt: {link.fetched_excerpt}</p> : null}
-                          {link.mismatch_notes ? <p>Mismatch: {link.mismatch_notes}</p> : null}
-                        </div>
-                      ))}
+                  }
+                  detail={
+                    <div className="space-y-3 text-sm leading-6 text-[var(--color-muted)]">
+                      {candidate.verification_summary ? (
+                        <p>{candidate.verification_summary}</p>
+                      ) : null}
+                      {renderVerifiedLinks(verifiedLinks, "Verification Details")}
                     </div>
-                  ) : null}
-                </article>
+                  }
+                />
               );
             })}
           </div>
-        </StateCard>
-      ) : null}
+        ) : (
+          <p className="text-sm leading-6 text-[var(--color-muted)]">
+            No rejected candidates yet.
+          </p>
+        )}
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Imported Candidates"
+        description="These candidates belong only to the current job workspace and are ready for screening, ranking, and HR review."
+        count={sortedCandidates.length}
+        open={openSections.includes("imported")}
+        onToggle={() => toggleSection("imported")}
+      >
+        {sortedCandidates.length === 0 ? (
+          <p className="text-sm leading-6 text-[var(--color-muted)]">
+            No candidates imported for this job yet.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {sortedCandidates.map((candidate) => {
+              const structured = readStructuredCandidate(candidate);
+              const verifiedLinks = readVerifiedLinks(candidate);
+              const technicalSkills = structured?.technical_skills ?? [];
+              const cloudSkills = structured?.platforms_cloud ?? [];
+              const toolingSkills = structured?.tooling_devops ?? [];
+              const topEvidence =
+                technicalSkills.find((skill) => skill.evidence?.length)?.evidence?.[0] ??
+                null;
+              const statusSummary = candidate.screening_decision
+                ? `verify ${candidate.verification_status ?? "pending"} · decision ${candidate.screening_decision} · ${candidate.match_rank != null ? `rank ${candidate.match_rank}` : "unranked"}`
+                : "pending screening";
+
+              return (
+                <CandidateListItem
+                  key={candidate.id}
+                  title={candidate.full_name}
+                  subtitle={`${candidate.extract_source ?? "manual"} · ${candidate.parse_source} · confidence ${formatConfidence(candidate.parse_confidence)} · graph ${candidate.graph_sync_status}`}
+                  summary={candidate.match_summary ?? candidate.verification_summary ?? statusSummary}
+                  open={expandedImportedIds.includes(candidate.id)}
+                  onToggle={() =>
+                    toggleExpandedId(candidate.id, setExpandedImportedIds)
+                  }
+                  badges={
+                    <span className="rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
+                      {candidate.status}
+                    </span>
+                  }
+                  detail={
+                    <div className="space-y-3 text-sm leading-6 text-[var(--color-muted)]">
+                      <p>{statusSummary}</p>
+                      <p>
+                        Technical:{" "}
+                        {technicalSkills.map((skill) => skill.name).join(", ") || "None"}
+                      </p>
+                      <p>
+                        Cloud: {cloudSkills.map((skill) => skill.name).join(", ") || "None"}
+                      </p>
+                      <p>
+                        Tooling:{" "}
+                        {toolingSkills.map((skill) => skill.name).join(", ") || "None"}
+                      </p>
+                      {candidate.verification_summary ? (
+                        <p>Verification: {candidate.verification_summary}</p>
+                      ) : null}
+                      {candidate.match_summary ? (
+                        <p>Match: {candidate.match_summary}</p>
+                      ) : null}
+                      {renderVerifiedLinks(verifiedLinks, "Verified Links")}
+                      {topEvidence ? (
+                        <p>
+                          Evidence: {topEvidence.text}{" "}
+                          <span className="uppercase tracking-[0.14em]">
+                            ({topEvidence.section_origin})
+                          </span>
+                        </p>
+                      ) : null}
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(candidate)}
+                          className="rounded-[12px] bg-[#101114] px-4 py-2 text-sm font-medium text-white"
+                        >
+                          Delete Candidate
+                        </button>
+                      </div>
+                    </div>
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
+      </CollapsibleSection>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

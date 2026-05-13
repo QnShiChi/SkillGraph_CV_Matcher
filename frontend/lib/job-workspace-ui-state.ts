@@ -38,6 +38,14 @@ export function openSkillSectionsKey(jobId: number) {
   return jobWorkspaceKey(jobId, "open-skill-sections");
 }
 
+export function expandedJdBlocksKey(jobId: number) {
+  return jobWorkspaceKey(jobId, "expanded-jd-blocks");
+}
+
+export function expandedSkillCardsKey(jobId: number) {
+  return jobWorkspaceKey(jobId, "expanded-skill-cards");
+}
+
 export function openCandidateSectionsKey(jobId: number) {
   return jobWorkspaceKey(jobId, "open-candidate-sections");
 }

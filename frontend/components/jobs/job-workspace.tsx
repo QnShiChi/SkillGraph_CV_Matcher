@@ -36,16 +36,28 @@ export function JobWorkspace({
         title="Workspace Status"
         description="This workspace is the job-centric handoff point for CV import and future matching."
       >
-        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-[var(--color-muted)]">
-          <span>Source: {job.source_type}</span>
-          <span>Extract: {job.extract_source ?? "manual"}</span>
-          <span>Parse: {job.parse_status}</span>
-          <span>Engine: {job.parse_source}</span>
-          <span>
+        <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+          <span className="rounded-full bg-[rgba(148,151,169,0.08)] px-3 py-2">
+            Source: {job.source_type}
+          </span>
+          <span className="rounded-full bg-[rgba(148,151,169,0.08)] px-3 py-2">
+            Extract: {job.extract_source ?? "manual"}
+          </span>
+          <span className="rounded-full bg-[rgba(148,151,169,0.08)] px-3 py-2">
+            Parse: {job.parse_status}
+          </span>
+          <span className="rounded-full bg-[rgba(148,151,169,0.08)] px-3 py-2">
+            Engine: {job.parse_source}
+          </span>
+          <span className="rounded-full bg-[rgba(148,151,169,0.08)] px-3 py-2">
             Confidence: {job.parse_confidence == null ? "N/A" : `${Math.round(job.parse_confidence * 100)}%`}
           </span>
-          <span>Graph: {job.graph_sync_status}</span>
-          <span>Status: {job.status}</span>
+          <span className="rounded-full bg-[rgba(148,151,169,0.08)] px-3 py-2">
+            Graph: {job.graph_sync_status}
+          </span>
+          <span className="rounded-full bg-[rgba(148,151,169,0.08)] px-3 py-2">
+            Status: {job.status}
+          </span>
         </div>
         {job.graph_sync_error ? (
           <p className="mt-3 text-sm leading-6 text-[#8b2d2d]">

@@ -7,6 +7,8 @@ import type { Job } from "@/lib/api";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { StateCard } from "@/components/state-card";
 import {
+  expandedJdBlocksKey,
+  expandedSkillCardsKey,
   type JobStructuredTab,
   type JobTextView,
   jdViewModeKey,
@@ -175,8 +177,12 @@ export function JobStructuredData({ job }: { job: Job }) {
   useEffect(() => {
     setActiveTab(readSessionValue(structuredTabKey(job.id), "jd-view"));
     setJdViewMode(readSessionValue(jdViewModeKey(job.id), "normalized"));
+    setExpandedBlocks(readSessionValue(expandedJdBlocksKey(job.id), []));
     setOpenSkillSections(
       readSessionValue(openSkillSectionsKey(job.id), ["technical"]),
+    );
+    setShowAllSkillSections(
+      readSessionValue(expandedSkillCardsKey(job.id), []),
     );
   }, [job.id]);
 
@@ -191,6 +197,14 @@ export function JobStructuredData({ job }: { job: Job }) {
   useEffect(() => {
     writeSessionValue(openSkillSectionsKey(job.id), openSkillSections);
   }, [job.id, openSkillSections]);
+
+  useEffect(() => {
+    writeSessionValue(expandedJdBlocksKey(job.id), expandedBlocks);
+  }, [expandedBlocks, job.id]);
+
+  useEffect(() => {
+    writeSessionValue(expandedSkillCardsKey(job.id), showAllSkillSections);
+  }, [job.id, showAllSkillSections]);
 
   function toggleExpandedBlock(block: TextBlockKey) {
     setExpandedBlocks((current) =>

@@ -181,7 +181,7 @@ export function JobCandidatePanel({
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="text-sm leading-6 text-[var(--color-muted)]">
-            <p>Policy: missing links, unreachable links, or links whose content does not support the CV claim => reject.</p>
+            <p>Policy: missing links, unreachable links, or links whose content does not support the CV claim {"=>"} reject.</p>
             <p>Ranking uses must-have coverage, verified project evidence, skill overlap, and experience signals.</p>
           </div>
           <button

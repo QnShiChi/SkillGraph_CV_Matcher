@@ -32,7 +32,7 @@ class OpenRouterClient:
     ) -> str:
         if not self.api_key:
             raise OpenRouterConfigurationError(
-                "OPENROUTER_API_KEY is required when JD parser mode uses OpenRouter."
+                "OPENROUTER_API_KEY is required when a parser mode uses OpenRouter."
             )
 
         payload = {

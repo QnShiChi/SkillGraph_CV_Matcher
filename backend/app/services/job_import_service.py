@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-import fitz
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
-from app.repositories.job_repository import create_imported_job
+from app.repositories.job_repository import create_imported_job, update_job_graph_sync
+from app.services.job_graph_sync import sync_job_to_graph
 from app.services.jd_parser import parse_jd_text, parse_jd_text_hybrid
 from app.services.openrouter_client import (
     OpenRouterClient,
     OpenRouterConfigurationError,
     OpenRouterError,
 )
+from app.services.pdf_text_extractor import extract_pdf_text
 
 
 def import_job_pdf(
@@ -25,32 +26,34 @@ def import_job_pdf(
     pdf_bytes = file.file.read()
     if not pdf_bytes:
         raise ValueError(
-            "Unable to extract readable text from PDF. Please upload a text-based PDF."
+            "Unable to extract readable text from PDF. Please upload a text-based PDF or a clearly scanned PDF."
         )
 
     try:
-        document = fitz.open(stream=pdf_bytes, filetype="pdf")
-    except Exception as error:  # pragma: no cover - PyMuPDF exception shape is unstable
+        extracted = extract_pdf_text(pdf_bytes)
+    except ValueError as error:
         raise ValueError(
-            "Unable to extract readable text from PDF. Please upload a text-based PDF."
+            "Unable to extract readable text from PDF. Please upload a text-based PDF or a clearly scanned PDF."
         ) from error
 
-    raw_text = "\n".join(page.get_text("text") for page in document).strip()
-    document.close()
-    if not raw_text:
-        raise ValueError(
-            "Unable to extract readable text from PDF. Please upload a text-based PDF."
-        )
-
     parsed = _parse_imported_job(
-        raw_text,
+        extracted["raw_text"],
         settings=resolved_settings,
         client=client,
     )
-    return create_imported_job(
+    parsed["extract_source"] = extracted["extract_source"]
+    job = create_imported_job(
         session,
         parsed=parsed,
         source_file_name=file.filename or "uploaded.pdf",
+    )
+    graph_sync = sync_job_to_graph(job, settings=resolved_settings)
+    return update_job_graph_sync(
+        session,
+        job,
+        status=graph_sync["status"],
+        error=graph_sync["error"],
+        synced_at=graph_sync["synced_at"],
     )
 
 

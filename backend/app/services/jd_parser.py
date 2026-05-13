@@ -51,8 +51,14 @@ TEXT_GROUP_ORDER: list[SkillCategory] = [
     "platforms_cloud",
     "tooling_devops",
     "competencies",
-    "role_descriptors",
 ]
+
+CONTEXTUAL_COMPETENCY_CANONICALS = {
+    "code_reviews",
+    "architectural_planning",
+    "performance_optimization",
+    "software_development_lifecycle",
+}
 
 
 def parse_jd_text(raw_text: str) -> dict[str, Any]:
@@ -597,12 +603,16 @@ def _build_required_skills_text(grouped: dict[SkillCategory, list[dict[str, Any]
 
 
 def _apply_group_policy(skill: dict[str, Any], group: SkillCategory) -> dict[str, Any]:
+    skill = {**skill}
     if group not in {"technical_skills", "tooling_devops", "platforms_cloud"}:
-        skill = {
-            **skill,
-            "prerequisites": [],
-            "related_skills": [],
-        }
+        skill["prerequisites"] = []
+        skill["related_skills"] = []
+    if group == "competencies" and skill["canonical"] in CONTEXTUAL_COMPETENCY_CANONICALS:
+        skill["requirement_type"] = "contextual"
+        skill["importance"] = min(skill["importance"], 3)
+    if group == "role_descriptors":
+        skill["requirement_type"] = "contextual"
+        skill["importance"] = min(skill["importance"], 3)
     return {**skill, "classification_target": group}
 
 

@@ -18,9 +18,13 @@ export type Job = {
   raw_jd_text: string | null;
   source_type: "manual" | "jd_pdf";
   source_file_name: string | null;
+  extract_source: "text_layer" | "ocr_fallback" | null;
   parse_status: "processed" | "failed";
   parse_source: "manual" | "rule_based" | "llm_hybrid" | "rule_based_fallback";
   parse_confidence: number | null;
+  graph_sync_status: "pending" | "synced" | "failed";
+  graph_sync_error: string | null;
+  graph_synced_at: string | null;
   structured_jd_json: Record<string, unknown> | null;
   status: string;
   created_at: string;
@@ -29,13 +33,43 @@ export type Job = {
 
 export type Candidate = {
   id: number;
+  job_id: number | null;
   full_name: string;
   email: string | null;
   resume_text: string | null;
   skills_text: string | null;
+  source_type: "manual" | "cv_pdf";
+  source_file_name: string | null;
+  extract_source: "text_layer" | "ocr_fallback" | null;
+  parse_status: "processed" | "failed";
+  parse_source: "manual" | "rule_based" | "llm_hybrid" | "rule_based_fallback";
+  parse_confidence: number | null;
+  graph_sync_status: "pending" | "synced" | "failed";
+  graph_sync_error: string | null;
+  graph_synced_at: string | null;
+  structured_cv_json: Record<string, unknown> | null;
   status: string;
   created_at: string;
   updated_at: string;
+};
+
+export type CandidateBulkImportItem = {
+  filename: string;
+  status: "imported" | "failed";
+  candidate_id: number | null;
+  candidate_name: string | null;
+  extract_source: Candidate["extract_source"] | null;
+  parse_source: Candidate["parse_source"] | null;
+  parse_confidence: number | null;
+  graph_sync_status: Candidate["graph_sync_status"] | null;
+  error: string | null;
+};
+
+export type CandidateBulkImportResponse = {
+  total_files: number;
+  success_count: number;
+  failed_count: number;
+  results: CandidateBulkImportItem[];
 };
 
 export type JobInput = {
@@ -114,6 +148,22 @@ export async function getJob(jobId: number): Promise<Job | null> {
 export async function getCandidates(): Promise<Candidate[]> {
   try {
     const response = await fetch(`${getApiBaseUrl()}/api/candidates`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    return (await response.json()) as Candidate[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getJobCandidates(jobId: number): Promise<Candidate[]> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/jobs/${jobId}/candidates`, {
       cache: "no-store",
     });
 
@@ -207,6 +257,28 @@ export async function createCandidate(
   }
 
   return (await response.json()) as Candidate;
+}
+
+export async function importJobCandidatesBulk(
+  jobId: number,
+  files: File[],
+): Promise<CandidateBulkImportResponse> {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+
+  const response = await fetch(`${getApiBaseUrl()}/api/jobs/${jobId}/candidates/import-bulk`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { detail?: string }
+      | null;
+    throw new Error(payload?.detail ?? "Unable to import CV batch for this job.");
+  }
+
+  return (await response.json()) as CandidateBulkImportResponse;
 }
 
 export async function updateCandidate(

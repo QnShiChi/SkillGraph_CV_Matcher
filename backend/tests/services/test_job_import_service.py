@@ -105,6 +105,7 @@ def test_import_job_pdf_hybrid_success_path(session) -> None:
     )
 
     assert job.parse_source == "llm_hybrid"
+    assert job.extract_source == "text_layer"
     assert job.parse_confidence is not None
     assert job.structured_jd_json["technical_skills"][0]["canonical"] == "python"
 
@@ -123,5 +124,90 @@ def test_import_job_pdf_hybrid_falls_back_to_rule_based(session) -> None:
     )
 
     assert job.parse_source == "rule_based_fallback"
+    assert job.extract_source == "text_layer"
     assert job.parse_confidence is not None
     assert job.required_skills_text is not None
+
+
+def test_import_job_pdf_marks_graph_sync_success(session, monkeypatch) -> None:
+    upload = _make_upload_file(
+        "Senior Backend Engineer\n\nRequired Skills\nPython\nFastAPI\nPostgreSQL"
+    )
+
+    def _fake_sync(job, *, settings):
+        del settings
+        assert job.title == "Senior Backend Engineer"
+        return {
+            "status": "synced",
+            "error": None,
+            "synced_at": job.created_at,
+        }
+
+    monkeypatch.setattr(
+        "app.services.job_import_service.sync_job_to_graph",
+        _fake_sync,
+    )
+
+    job = import_job_pdf(
+        session,
+        upload,
+        settings=_make_settings(jd_parser_mode="rule_based"),
+    )
+
+    assert job.graph_sync_status == "synced"
+    assert job.extract_source == "text_layer"
+    assert job.graph_sync_error is None
+    assert job.graph_synced_at is not None
+
+
+def test_import_job_pdf_keeps_job_when_graph_sync_fails(session, monkeypatch) -> None:
+    upload = _make_upload_file(
+        "Senior Backend Engineer\n\nRequired Skills\nPython\nFastAPI\nPostgreSQL"
+    )
+
+    def _fake_sync(job, *, settings):
+        del settings
+        return {
+            "status": "failed",
+            "error": "neo4j unavailable",
+            "synced_at": None,
+        }
+
+    monkeypatch.setattr(
+        "app.services.job_import_service.sync_job_to_graph",
+        _fake_sync,
+    )
+
+    job = import_job_pdf(
+        session,
+        upload,
+        settings=_make_settings(jd_parser_mode="rule_based"),
+    )
+
+    assert job.id is not None
+    assert job.extract_source == "text_layer"
+    assert job.graph_sync_status == "failed"
+    assert job.graph_sync_error == "neo4j unavailable"
+    assert job.graph_synced_at is None
+
+
+def test_import_job_pdf_marks_ocr_fallback_extract_source(session, monkeypatch) -> None:
+    upload = _make_upload_file(
+        "Senior Backend Engineer\n\nRequired Skills\nPython\nFastAPI\nPostgreSQL"
+    )
+
+    monkeypatch.setattr(
+        "app.services.job_import_service.extract_pdf_text",
+        lambda pdf_bytes: {
+            "raw_text": "Senior Backend Engineer Required Skills Python FastAPI PostgreSQL",
+            "extract_source": "ocr_fallback",
+        },
+    )
+
+    job = import_job_pdf(
+        session,
+        upload,
+        settings=_make_settings(jd_parser_mode="rule_based"),
+    )
+
+    assert job.extract_source == "ocr_fallback"

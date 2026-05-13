@@ -117,12 +117,12 @@ export function CandidateAdminClient({
       <PageHeader
         eyebrow="Admin"
         title="Candidates"
-        description="Manage candidate records with direct create, edit, and hard delete actions in the workspace."
+        description="Review candidate records imported from job workspaces and maintain manual entries when needed."
         action={
           <button
             type="button"
             onClick={openCreateDrawer}
-            className="rounded-[14px] bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-brand-dark)]"
+            className="rounded-[14px] border border-[var(--color-border)] px-5 py-3 text-sm font-semibold text-[var(--color-text)]"
           >
             Create Candidate
           </button>
@@ -132,7 +132,7 @@ export function CandidateAdminClient({
       <div className="grid gap-5 md:grid-cols-3">
         <StateCard
           title="Persisted candidates"
-          description="Each change updates this total immediately after the backend mutation succeeds."
+          description="This reflects the global candidate pool persisted in PostgreSQL."
         >
           <p className="text-4xl font-bold tracking-[-0.04em] text-[var(--color-text)]">
             {candidates.length}
@@ -140,11 +140,11 @@ export function CandidateAdminClient({
         </StateCard>
         <StateCard
           title="Workflow"
-          description="Use reviewed and matched statuses to prepare later ranking and explainability features."
+          description="Candidates are now imported from job workspaces, then reviewed here as a supporting admin view."
         />
         <StateCard
           title="Storage"
-          description="Candidate text and skills are stored in PostgreSQL through FastAPI persistence APIs."
+          description="Candidate text, grouped skills, provenance, and graph sync metadata remain queryable here."
         />
       </div>
 

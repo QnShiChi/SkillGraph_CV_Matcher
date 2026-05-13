@@ -228,9 +228,13 @@ export function JobStructuredData({ job }: { job: Job }) {
           <div className="space-y-3 text-sm leading-6 text-[var(--color-muted)]">
             <p>Source type: {job.source_type}</p>
             <p>Source file: {job.source_file_name ?? "Manual entry"}</p>
+            <p>Extract source: {job.extract_source ?? "Manual entry"}</p>
             <p>Parse status: {job.parse_status}</p>
             <p>Parse source: {job.parse_source}</p>
             <p>Parse confidence: {formatConfidence(job.parse_confidence)}</p>
+            <p>Graph sync status: {job.graph_sync_status}</p>
+            <p>Graph synced at: {job.graph_synced_at ?? "Not synced yet"}</p>
+            {job.graph_sync_error ? <p>Graph sync error: {job.graph_sync_error}</p> : null}
             <p>
               Skill groups: {structured?.skill_groups?.join(", ") || "No groups assigned"}
             </p>

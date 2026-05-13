@@ -23,6 +23,8 @@ def parser_settings(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, No
     monkeypatch.setenv("JD_PARSER_MODE", "rule_based")
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
     monkeypatch.setenv("JD_PARSER_ENABLE_FALLBACK", "true")
+    monkeypatch.setenv("CV_PARSER_MODE", "rule_based")
+    monkeypatch.setenv("CV_PARSER_ENABLE_FALLBACK", "true")
     get_settings.cache_clear()
     try:
         yield

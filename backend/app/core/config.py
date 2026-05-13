@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     jd_parser_max_output_tokens: int = 12000
     jd_parser_timeout_seconds: int = 90
     jd_parser_enable_fallback: bool = True
+    cv_parser_mode: Literal["rule_based", "hybrid", "llm_only"] = "rule_based"
+    cv_parser_temperature: float = 0.1
+    cv_parser_max_output_tokens: int = 12000
+    cv_parser_timeout_seconds: int = 90
+    cv_parser_enable_fallback: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",

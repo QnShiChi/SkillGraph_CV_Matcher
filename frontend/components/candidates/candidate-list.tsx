@@ -13,6 +13,46 @@ function formatDate(value: string) {
   return `${day}/${month}/${year} ${hours}:${minutes} UTC`;
 }
 
+function formatConfidence(value: number | null) {
+  if (value == null) {
+    return "N/A";
+  }
+
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatGraphStatus(status: Candidate["graph_sync_status"]) {
+  switch (status) {
+    case "synced":
+      return "Graph synced";
+    case "failed":
+      return "Graph failed";
+    default:
+      return "Graph pending";
+  }
+}
+
+type StructuredSkill = {
+  name: string;
+  canonical: string;
+  evidence?: Array<{ text: string; section_origin: string }>;
+};
+
+type StructuredCv = {
+  summary?: string | null;
+  technical_skills?: StructuredSkill[];
+  platforms_cloud?: StructuredSkill[];
+  tooling_devops?: StructuredSkill[];
+};
+
+function readStructuredCv(candidate: Candidate): StructuredCv | null {
+  if (!candidate.structured_cv_json || typeof candidate.structured_cv_json !== "object") {
+    return null;
+  }
+
+  return candidate.structured_cv_json as StructuredCv;
+}
+
 export function CandidateList({
   candidates,
   onEdit,
@@ -34,10 +74,20 @@ export function CandidateList({
   return (
     <div className="grid gap-5 xl:grid-cols-2">
       {candidates.map((candidate) => (
-        <article
-          key={candidate.id}
-          className="rounded-[22px] border border-[var(--color-border)] bg-white p-6 shadow-micro"
-        >
+        <article key={candidate.id} className="rounded-[22px] border border-[var(--color-border)] bg-white p-6 shadow-micro">
+          {(() => {
+            const structured = readStructuredCv(candidate);
+            const technicalSkills = structured?.technical_skills ?? [];
+            const platformSkills = structured?.platforms_cloud ?? [];
+            const toolingSkills = structured?.tooling_devops ?? [];
+            const topEvidence =
+              technicalSkills.find((skill) => skill.evidence?.length)?.evidence?.[0] ??
+              platformSkills.find((skill) => skill.evidence?.length)?.evidence?.[0] ??
+              toolingSkills.find((skill) => skill.evidence?.length)?.evidence?.[0] ??
+              null;
+
+            return (
+              <>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <span className="inline-flex rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
@@ -69,6 +119,14 @@ export function CandidateList({
           </div>
 
           <div className="mt-6 grid gap-4 text-sm leading-6 text-[var(--color-muted)]">
+            {structured?.summary ? (
+              <div className="rounded-[16px] bg-[rgba(148,151,169,0.08)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
+                  Summary
+                </p>
+                <p className="mt-2">{structured.summary}</p>
+              </div>
+            ) : null}
             <div className="rounded-[16px] bg-[rgba(148,151,169,0.08)] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
                 Resume text
@@ -81,12 +139,52 @@ export function CandidateList({
               </p>
               <p className="mt-2">{candidate.skills_text ?? "No skills captured yet."}</p>
             </div>
+            {technicalSkills.length || platformSkills.length || toolingSkills.length ? (
+              <div className="rounded-[16px] bg-[rgba(148,151,169,0.08)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
+                  Structured groups
+                </p>
+                <div className="mt-2 space-y-1">
+                  <p>Technical: {technicalSkills.map((skill) => skill.name).join(", ") || "None"}</p>
+                  <p>Cloud: {platformSkills.map((skill) => skill.name).join(", ") || "None"}</p>
+                  <p>Tooling: {toolingSkills.map((skill) => skill.name).join(", ") || "None"}</p>
+                </div>
+              </div>
+            ) : null}
+            {topEvidence ? (
+              <div className="rounded-[16px] bg-[rgba(148,151,169,0.08)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
+                  Evidence sample
+                </p>
+                <p className="mt-2">{topEvidence.text}</p>
+                <p className="mt-2 text-xs uppercase tracking-[0.14em]">
+                  Source {topEvidence.section_origin}
+                </p>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
+              <span>Source {candidate.source_type}</span>
+              {candidate.extract_source ? <span>Extract {candidate.extract_source}</span> : null}
+              <span>Parse {candidate.parse_status}</span>
+              <span>Engine {candidate.parse_source}</span>
+              <span>Confidence {formatConfidence(candidate.parse_confidence)}</span>
+              <span>{formatGraphStatus(candidate.graph_sync_status)}</span>
+              {candidate.source_file_name ? <span>File {candidate.source_file_name}</span> : null}
+            </div>
+            {candidate.graph_sync_status === "failed" && candidate.graph_sync_error ? (
+              <p className="text-xs leading-5 text-[#8b2d2d]">
+                Graph sync error: {candidate.graph_sync_error}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
             <span>Created {formatDate(candidate.created_at)}</span>
             <span>Updated {formatDate(candidate.updated_at)}</span>
           </div>
+              </>
+            );
+          })()}
         </article>
       ))}
     </div>

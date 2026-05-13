@@ -9,7 +9,11 @@ from app.repositories.candidate_repository import (
     list_candidates,
     update_candidate,
 )
-from app.schemas.candidate import CandidateCreate, CandidateRead, CandidateUpdate
+from app.schemas.candidate import (
+    CandidateCreate,
+    CandidateRead,
+    CandidateUpdate,
+)
 
 router = APIRouter(prefix="/api/candidates", tags=["candidates"])
 
@@ -25,7 +29,6 @@ def post_candidate(
     session: Session = Depends(get_db_session),
 ) -> CandidateRead:
     return create_candidate(session, payload)
-
 
 @router.put("/{candidate_id}", response_model=CandidateRead)
 def put_candidate(

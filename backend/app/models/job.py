@@ -18,6 +18,7 @@ class Job(Base):
     raw_jd_text: Mapped[str | None] = mapped_column(Text(), nullable=True)
     source_type: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
     source_file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    extract_source: Mapped[str | None] = mapped_column(String(50), nullable=True)
     parse_status: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
@@ -29,6 +30,16 @@ class Job(Base):
         default="manual",
     )
     parse_confidence: Mapped[float | None] = mapped_column(nullable=True)
+    graph_sync_status: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="pending",
+    )
+    graph_sync_error: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    graph_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     structured_jd_json: Mapped[dict | None] = mapped_column(JSON(), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="draft")
     created_at: Mapped[datetime] = mapped_column(

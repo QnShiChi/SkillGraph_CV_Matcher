@@ -23,6 +23,17 @@ function formatConfidence(value: number | null) {
   return `${Math.round(value * 100)}%`;
 }
 
+function formatGraphStatus(status: Job["graph_sync_status"]) {
+  switch (status) {
+    case "synced":
+      return "Graph synced";
+    case "failed":
+      return "Graph failed";
+    default:
+      return "Graph pending";
+  }
+}
+
 export function JobList({
   jobs,
   onEdit,
@@ -91,11 +102,18 @@ export function JobList({
             </div>
             <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
               <span>Source {job.source_type}</span>
+              {job.extract_source ? <span>Extract {job.extract_source}</span> : null}
               <span>Parse {job.parse_status}</span>
               <span>Engine {job.parse_source}</span>
               <span>Confidence {formatConfidence(job.parse_confidence)}</span>
+              <span>{formatGraphStatus(job.graph_sync_status)}</span>
               {job.source_file_name ? <span>File {job.source_file_name}</span> : null}
             </div>
+            {job.graph_sync_status === "failed" && job.graph_sync_error ? (
+              <p className="text-xs leading-5 text-[#8b2d2d]">
+                Graph sync error: {job.graph_sync_error}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">

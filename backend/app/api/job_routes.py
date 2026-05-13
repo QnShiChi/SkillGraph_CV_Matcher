@@ -9,8 +9,11 @@ from app.repositories.job_repository import (
     list_jobs,
     update_job,
 )
+from app.repositories.candidate_repository import list_candidates_for_job
+from app.schemas.candidate import CandidateBulkImportResponse, CandidateRead
 from app.schemas.job import JobCreate, JobRead, JobUpdate
 from app.services.job_import_service import import_job_pdf
+from app.services.candidate_import_service import import_candidate_pdf, import_candidates_bulk
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -55,6 +58,73 @@ def get_job(job_id: int, session: Session = Depends(get_db_session)) -> JobRead:
         )
 
     return job
+
+
+@router.get("/{job_id}/candidates", response_model=list[CandidateRead])
+def get_job_candidates(job_id: int, session: Session = Depends(get_db_session)) -> list[CandidateRead]:
+    job = get_job_by_id(session, job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found.",
+        )
+
+    return list_candidates_for_job(session, job_id)
+
+
+@router.post("/{job_id}/candidates/import", response_model=CandidateRead, status_code=status.HTTP_201_CREATED)
+def import_job_candidate(
+    job_id: int,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_db_session),
+) -> CandidateRead:
+    job = get_job_by_id(session, job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found.",
+        )
+
+    if file.content_type != "application/pdf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF uploads are supported.",
+        )
+
+    try:
+        return import_candidate_pdf(session, file, job_id=job_id)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.post(
+    "/{job_id}/candidates/import-bulk",
+    response_model=CandidateBulkImportResponse,
+    status_code=status.HTTP_200_OK,
+)
+def import_job_candidates_bulk(
+    job_id: int,
+    files: list[UploadFile] = File(...),
+    session: Session = Depends(get_db_session),
+) -> CandidateBulkImportResponse:
+    job = get_job_by_id(session, job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found.",
+        )
+
+    if not files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one PDF file is required.",
+        )
+
+    result = import_candidates_bulk(session, files, job_id=job_id)
+    return CandidateBulkImportResponse(**result)
 
 
 @router.put("/{job_id}", response_model=JobRead)

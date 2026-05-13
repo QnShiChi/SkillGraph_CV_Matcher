@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 
 from app.models.job import Job
 from app.schemas.job import JobCreate, JobUpdate
@@ -23,6 +24,9 @@ def create_job(session: Session, payload: JobCreate) -> Job:
         parse_status="processed",
         parse_source="manual",
         parse_confidence=None,
+        graph_sync_status="pending",
+        graph_sync_error=None,
+        graph_synced_at=None,
         status=payload.status,
     )
     session.add(job)
@@ -46,9 +50,13 @@ def create_imported_job(
         raw_jd_text=parsed["raw_jd_text"],
         source_type="jd_pdf",
         source_file_name=source_file_name,
+        extract_source=parsed["extract_source"],
         parse_status="processed",
         parse_source=parsed["parse_source"],
         parse_confidence=parsed["parse_confidence"],
+        graph_sync_status="pending",
+        graph_sync_error=None,
+        graph_synced_at=None,
         structured_jd_json=parsed["structured_jd_json"],
         status="draft",
     )
@@ -73,3 +81,20 @@ def update_job(session: Session, job: Job, payload: JobUpdate) -> Job:
 def delete_job(session: Session, job: Job) -> None:
     session.delete(job)
     session.commit()
+
+
+def update_job_graph_sync(
+    session: Session,
+    job: Job,
+    *,
+    status: str,
+    error: str | None,
+    synced_at: datetime | None,
+) -> Job:
+    job.graph_sync_status = status
+    job.graph_sync_error = error
+    job.graph_synced_at = synced_at.astimezone(timezone.utc) if synced_at else None
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+    return job

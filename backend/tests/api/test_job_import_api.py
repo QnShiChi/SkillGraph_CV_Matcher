@@ -25,9 +25,11 @@ def test_import_job_pdf_creates_graph_ready_job(client) -> None:
     assert response.status_code == 201
     payload = response.json()
     assert payload["source_type"] == "jd_pdf"
+    assert payload["extract_source"] in {"text_layer", "ocr_fallback"}
     assert payload["parse_status"] == "processed"
     assert payload["parse_source"] == "rule_based"
     assert payload["parse_confidence"] is not None
+    assert payload["graph_sync_status"] in {"synced", "failed"}
     assert payload["structured_jd_json"] is not None
     assert "technical_skills" in payload["structured_jd_json"]
     assert payload["source_file_name"] == "jd.pdf"

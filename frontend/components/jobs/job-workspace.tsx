@@ -1,9 +1,8 @@
-import Link from "next/link";
-
-import type { Job } from "@/lib/api";
+import type { Job, JobKnowledgeGraph } from "@/lib/api";
 
 import { JobCandidatePanel } from "@/components/jobs/job-candidate-panel";
 import { JobStructuredData } from "@/components/jobs/job-structured-data";
+import { JobWorkspaceActions } from "@/components/jobs/job-workspace-actions";
 import { PageHeader } from "@/components/page-header";
 import { StateCard } from "@/components/state-card";
 
@@ -12,35 +11,29 @@ import type { Candidate } from "@/lib/api";
 export function JobWorkspace({
   job,
   initialCandidates,
+  knowledgeGraph,
 }: {
   job: Job;
   initialCandidates: Candidate[];
+  knowledgeGraph: JobKnowledgeGraph | null;
 }) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         eyebrow="Job Workspace"
         title={job.title}
         description={`Inspect normalized JD data, graph-ready skill structure, and import metadata before candidate ingestion is added.`}
-        action={
-          <Link
-            href="/admin/jobs"
-            className="rounded-[14px] border border-[var(--color-border)] px-5 py-3 text-sm font-semibold text-[var(--color-text)]"
-          >
-            Back to Admin Jobs
-          </Link>
-        }
+        action={<JobWorkspaceActions jobId={job.id} />}
       />
 
       <StateCard
         title="Workspace Status"
-        description="This workspace is the job-centric handoff point for CV import and future matching."
+        description="Compact operational view for this workspace."
       >
-        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-[var(--color-muted)]">
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium text-[var(--color-muted)]">
           <span>Source: {job.source_type}</span>
           <span>Extract: {job.extract_source ?? "manual"}</span>
           <span>Parse: {job.parse_status}</span>
-          <span>Engine: {job.parse_source}</span>
           <span>
             Confidence: {job.parse_confidence == null ? "N/A" : `${Math.round(job.parse_confidence * 100)}%`}
           </span>
@@ -54,7 +47,7 @@ export function JobWorkspace({
         ) : null}
       </StateCard>
 
-      <JobStructuredData job={job} />
+      <JobStructuredData job={job} knowledgeGraph={knowledgeGraph} />
 
       <JobCandidatePanel jobId={job.id} initialCandidates={initialCandidates} />
     </div>

@@ -12,6 +12,35 @@ JobParseSource = Literal["manual", "rule_based", "llm_hybrid", "rule_based_fallb
 JobGraphSyncStatus = Literal["pending", "synced", "failed"]
 
 
+class JobKnowledgeGraphNode(BaseModel):
+    id: str
+    label: str
+    kind: Literal["job", "skill", "dependency"]
+    subtitle: str
+    category: str | None = None
+    importance: float | None = None
+    requirement_type: str | None = None
+
+
+class JobKnowledgeGraphEdge(BaseModel):
+    source: str
+    target: str
+    kind: Literal["requires", "prerequisite"]
+
+
+class JobKnowledgeGraphRead(BaseModel):
+    job_id: int
+    title: str
+    status: JobStatus
+    graph_sync_status: JobGraphSyncStatus
+    available: bool
+    message: str | None
+    node_count: int
+    edge_count: int
+    nodes: list[JobKnowledgeGraphNode]
+    edges: list[JobKnowledgeGraphEdge]
+
+
 class JobCreate(BaseModel):
     title: str
     description: str | None = None

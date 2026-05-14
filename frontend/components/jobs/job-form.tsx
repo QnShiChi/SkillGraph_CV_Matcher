@@ -123,7 +123,7 @@ export function JobForm({
           id="job-title"
           value={values.title}
           onChange={(event) => updateField("title", event.target.value)}
-          className="w-full rounded-[14px] border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-brand)]"
+          className="w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm text-[var(--color-text)] outline-none shadow-[0_10px_24px_rgba(10,20,40,0.04)] transition focus:border-[var(--color-brand)]"
           placeholder="Senior Frontend Engineer"
         />
       </div>
@@ -139,7 +139,7 @@ export function JobForm({
           id="job-description"
           value={values.description}
           onChange={(event) => updateField("description", event.target.value)}
-          className="min-h-32 w-full rounded-[14px] border border-[var(--color-border)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition focus:border-[var(--color-brand)]"
+          className="min-h-32 w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none shadow-[0_10px_24px_rgba(10,20,40,0.04)] transition focus:border-[var(--color-brand)]"
           placeholder="Describe the role, responsibilities, and expectations."
         />
       </div>
@@ -155,7 +155,7 @@ export function JobForm({
           id="job-required-skills"
           value={values.required_skills_text}
           onChange={(event) => updateField("required_skills_text", event.target.value)}
-          className="min-h-28 w-full rounded-[14px] border border-[var(--color-border)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition focus:border-[var(--color-brand)]"
+          className="min-h-28 w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none shadow-[0_10px_24px_rgba(10,20,40,0.04)] transition focus:border-[var(--color-brand)]"
           placeholder="React, TypeScript, system design, API integration"
         />
       </div>
@@ -168,7 +168,7 @@ export function JobForm({
           id="job-status"
           value={values.status}
           onChange={(event) => updateField("status", event.target.value)}
-          className="w-full rounded-[14px] border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-brand)]"
+          className="w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm text-[var(--color-text)] outline-none shadow-[0_10px_24px_rgba(10,20,40,0.04)] transition focus:border-[var(--color-brand)]"
         >
           {statusOptions.map((status) => (
             <option key={status} value={status}>
@@ -179,7 +179,7 @@ export function JobForm({
       </div>
 
       {localError || errorMessage ? (
-        <div className="rounded-[16px] border border-[rgba(183,54,54,0.16)] bg-[rgba(183,54,54,0.06)] px-4 py-3 text-sm text-[#8d2020]">
+        <div className="rounded-[20px] border border-[rgba(183,54,54,0.16)] bg-[rgba(183,54,54,0.06)] px-4 py-3 text-sm text-[#8d2020]">
           {localError ?? errorMessage}
         </div>
       ) : null}
@@ -188,7 +188,7 @@ export function JobForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-[14px] bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-brand-dark)] disabled:cursor-not-allowed disabled:opacity-70"
+          className="rounded-full bg-[linear-gradient(135deg,#4b41e1_0%,#3028b4_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(75,65,225,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isSubmitting
             ? mode === "create"
@@ -201,7 +201,7 @@ export function JobForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-[14px] border border-[var(--color-border)] px-5 py-3 text-sm font-medium text-[var(--color-text)]"
+          className="rounded-full border border-white/70 bg-white/80 px-5 py-3 text-sm font-medium text-[var(--color-text)] transition hover:bg-white"
         >
           Cancel
         </button>

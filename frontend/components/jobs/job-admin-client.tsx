@@ -150,14 +150,14 @@ export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
             <button
               type="button"
               onClick={openImportDrawer}
-              className="rounded-[14px] bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-brand-dark)]"
+              className="rounded-full bg-[linear-gradient(135deg,#4b41e1_0%,#3028b4_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(75,65,225,0.24)] transition hover:opacity-95"
             >
               Import JD PDF
             </button>
             <button
               type="button"
               onClick={openCreateDrawer}
-              className="rounded-[14px] border border-[var(--color-border)] px-5 py-3 text-sm font-semibold text-[var(--color-text)]"
+              className="rounded-full border border-white/70 bg-white/80 px-5 py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-white"
             >
               Create Job
             </button>
@@ -225,7 +225,7 @@ export function JobAdminClient({ initialJobs }: { initialJobs: Job[] }) {
         title="Delete job permanently?"
         description={
           deleteTarget
-            ? `This will permanently remove "${deleteTarget.title}" from PostgreSQL.`
+            ? `This will permanently remove "${deleteTarget.title}" and all candidates attached to this job from PostgreSQL.`
             : ""
         }
         confirmLabel={isDeleting ? "Deleting..." : "Delete Job"}

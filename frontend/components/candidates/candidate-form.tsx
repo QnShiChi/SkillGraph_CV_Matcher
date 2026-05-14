@@ -140,7 +140,7 @@ export function CandidateForm({
           id="candidate-name"
           value={values.full_name}
           onChange={(event) => updateField("full_name", event.target.value)}
-          className="w-full rounded-[14px] border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-brand)]"
+          className="w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm text-[var(--color-text)] outline-none shadow-[0_10px_24px_rgba(10,20,40,0.04)] transition focus:border-[var(--color-brand)]"
           placeholder="Nguyen Van A"
         />
       </div>
@@ -157,7 +157,7 @@ export function CandidateForm({
           type="email"
           value={values.email}
           onChange={(event) => updateField("email", event.target.value)}
-          className="w-full rounded-[14px] border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-brand)]"
+          className="w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm text-[var(--color-text)] outline-none shadow-[0_10px_24px_rgba(10,20,40,0.04)] transition focus:border-[var(--color-brand)]"
           placeholder="candidate@example.com"
         />
       </div>
@@ -173,7 +173,7 @@ export function CandidateForm({
           id="candidate-resume"
           value={values.resume_text}
           onChange={(event) => updateField("resume_text", event.target.value)}
-          className="min-h-32 w-full rounded-[14px] border border-[var(--color-border)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition focus:border-[var(--color-brand)]"
+          className="min-h-32 w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none shadow-[0_10px_24px_rgba(10,20,40,0.04)] transition focus:border-[var(--color-brand)]"
           placeholder="Summarized resume content or parsed CV text."
         />
       </div>
@@ -189,7 +189,7 @@ export function CandidateForm({
           id="candidate-skills"
           value={values.skills_text}
           onChange={(event) => updateField("skills_text", event.target.value)}
-          className="min-h-28 w-full rounded-[14px] border border-[var(--color-border)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition focus:border-[var(--color-brand)]"
+          className="min-h-28 w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none shadow-[0_10px_24px_rgba(10,20,40,0.04)] transition focus:border-[var(--color-brand)]"
           placeholder="Python, NLP, PostgreSQL, Neo4j"
         />
       </div>
@@ -205,7 +205,7 @@ export function CandidateForm({
           id="candidate-status"
           value={values.status}
           onChange={(event) => updateField("status", event.target.value)}
-          className="w-full rounded-[14px] border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-brand)]"
+          className="w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm text-[var(--color-text)] outline-none shadow-[0_10px_24px_rgba(10,20,40,0.04)] transition focus:border-[var(--color-brand)]"
         >
           {statusOptions.map((status) => (
             <option key={status} value={status}>
@@ -216,7 +216,7 @@ export function CandidateForm({
       </div>
 
       {localError || errorMessage ? (
-        <div className="rounded-[16px] border border-[rgba(183,54,54,0.16)] bg-[rgba(183,54,54,0.06)] px-4 py-3 text-sm text-[#8d2020]">
+        <div className="rounded-[20px] border border-[rgba(183,54,54,0.16)] bg-[rgba(183,54,54,0.06)] px-4 py-3 text-sm text-[#8d2020]">
           {localError ?? errorMessage}
         </div>
       ) : null}
@@ -225,7 +225,7 @@ export function CandidateForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-[14px] bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-brand-dark)] disabled:cursor-not-allowed disabled:opacity-70"
+          className="rounded-full bg-[linear-gradient(135deg,#4b41e1_0%,#3028b4_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(75,65,225,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isSubmitting
             ? mode === "create"
@@ -238,7 +238,7 @@ export function CandidateForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-[14px] border border-[var(--color-border)] px-5 py-3 text-sm font-medium text-[var(--color-text)]"
+          className="rounded-full border border-white/70 bg-white/80 px-5 py-3 text-sm font-medium text-[var(--color-text)] transition hover:bg-white"
         >
           Cancel
         </button>

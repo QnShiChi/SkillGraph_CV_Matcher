@@ -12,16 +12,16 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="rounded-[24px] border border-[var(--color-border)] bg-white/90 p-6 shadow-whisper md:p-8">
-      <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+    <header className="rounded-[28px] border border-white/70 bg-white/75 p-5 shadow-[0_24px_80px_rgba(10,20,40,0.08)] backdrop-blur-xl md:p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-brand-dark)]">
+          <p className="inline-flex rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-brand-dark)]">
             {eyebrow}
           </p>
-          <h1 className="mt-3 font-display text-3xl font-bold tracking-[-0.04em] text-[var(--color-text)] md:text-4xl">
+          <h1 className="mt-3 text-3xl font-bold tracking-[-0.04em] text-[var(--color-text)] md:text-4xl">
             {title}
           </h1>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--color-muted)] md:text-base">
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--color-muted)] md:text-[15px]">
             {description}
           </p>
         </div>

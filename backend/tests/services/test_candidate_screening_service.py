@@ -64,7 +64,7 @@ def _make_settings(**overrides) -> Settings:
         "cv_parser_max_output_tokens": 12000,
         "cv_parser_timeout_seconds": 90,
         "cv_parser_enable_fallback": True,
-        "matching_review_mode": "deterministic",
+        "matching_review_mode": "agentscope",
         "matching_review_timeout_seconds": 60,
     }
     values.update(overrides)
@@ -243,6 +243,18 @@ def test_screen_and_rank_job_candidates_ranks_only_verified_candidates(session, 
             }
         ),
     )
+    monkeypatch.setattr(
+        "app.services.candidate_screening_service.run_agentscope_candidate_review",
+        lambda **kwargs: {
+            "match_summary": "AgentScope reviewed the candidate.",
+            "final_report_json": {
+                "strengths": ["python"],
+                "gaps": [],
+                "explanation": "AgentScope explanation.",
+                "critic_review": "Approved by critic.",
+            },
+        },
+    )
 
     result = screen_and_rank_job_candidates(
         session,
@@ -265,7 +277,7 @@ def test_screen_and_rank_job_candidates_ranks_only_verified_candidates(session, 
     assert ranked[0].verified_links_json[0]["claim_match_status"] == "matched"
 
 
-def test_screen_and_rank_job_candidates_uses_agentscope_review_when_enabled(
+def test_screen_and_rank_job_candidates_uses_agentscope_review_for_verified_candidates(
     session,
     monkeypatch,
 ) -> None:
@@ -313,7 +325,7 @@ def test_screen_and_rank_job_candidates_uses_agentscope_review_when_enabled(
     result = screen_and_rank_job_candidates(
         session,
         job_id=job.id,
-        settings=_make_settings(matching_review_mode="agentscope"),
+        settings=_make_settings(),
     )
 
     ranked = result["ranked_candidates"][0]
@@ -356,6 +368,18 @@ def test_screen_and_rank_job_candidates_rejects_reachable_link_when_project_clai
             "content": "Wedding photography gallery booking website built with PHP and WordPress.",
             "title": "Wedding Gallery Site",
             "reachable": True,
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.candidate_screening_service.run_agentscope_candidate_review",
+        lambda **kwargs: {
+            "match_summary": "AgentScope reviewed the mismatch candidate.",
+            "final_report_json": {
+                "strengths": [],
+                "gaps": ["evidence mismatch"],
+                "explanation": "AgentScope explanation.",
+                "critic_review": "Rejected by critic.",
+            },
         },
     )
 

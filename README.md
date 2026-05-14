@@ -57,7 +57,7 @@ This writes a dump file to `backups/postgres/` using a timestamped filename.
 Restore a specific backup version:
 
 ```bash
-make restore BACKUP_FILE=backups/postgres/skillgraph-20260511-153000.dump
+make restore BACKUP_FILE=backups/postgres/skillgraph-20260511-153000.sql
 ```
 
 Notes:
@@ -256,6 +256,6 @@ Notes:
 - `make restart`: restart the full stack
 - `make logs`: tail Docker Compose logs
 - `make ps`: show service status
-- `make backup-db`: create a timestamped PostgreSQL dump in `backups/postgres/`
-- `make restore BACKUP_FILE=...`: restore PostgreSQL from a chosen dump file
+- `make backup-db`: create a timestamped PostgreSQL `.sql` backup in `backups/postgres/`
+- `make restore BACKUP_FILE=...`: restore PostgreSQL from a chosen `.sql` backup file
 - `make migrate`: apply the latest Alembic migration to PostgreSQL

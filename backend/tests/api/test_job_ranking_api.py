@@ -95,6 +95,27 @@ def test_screen_and_rank_job_candidates_endpoint_returns_ranked_and_rejected_lis
             "reason": None,
         },
     )
+    monkeypatch.setattr(
+        "app.services.candidate_screening_service._fetch_link_content",
+        lambda url, timeout_seconds=5: {
+            "url": url,
+            "content": "Verified Candidate Python FastAPI project with production APIs.",
+            "title": "Verified Candidate Project",
+            "reachable": True,
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.candidate_screening_service.run_agentscope_candidate_review",
+        lambda **kwargs: {
+            "match_summary": "AgentScope approved the verified candidate.",
+            "final_report_json": {
+                "strengths": ["python", "fastapi"],
+                "gaps": [],
+                "explanation": "AgentScope explanation.",
+                "critic_review": "Critic approved.",
+            },
+        },
+    )
 
     response = client.post(f"/api/jobs/{job.id}/screen-and-rank")
 

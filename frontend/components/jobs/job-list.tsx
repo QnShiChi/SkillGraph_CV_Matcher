@@ -53,75 +53,81 @@ export function JobList({
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-2">
-      {jobs.map((job) => (
-        <article
-          key={job.id}
-          className="rounded-[22px] border border-[var(--color-border)] bg-white p-6 shadow-micro"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <span className="inline-flex rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
-                {job.status}
-              </span>
-              <h3 className="mt-4 font-display text-2xl font-bold tracking-[-0.03em] text-[var(--color-text)]">
-                {job.title}
-              </h3>
-            </div>
-            <div className="flex gap-2">
+    <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+      {jobs.map((job) => {
+        return (
+          <article
+            key={job.id}
+            className="group relative overflow-hidden rounded-[22px] border border-white/70 bg-white/88 p-4 shadow-[0_16px_42px_rgba(10,20,40,0.07)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-[0_24px_58px_rgba(10,20,40,0.11)]"
+          >
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex rounded-full bg-[var(--color-brand-subtle)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
+                      {job.status}
+                    </span>
+                    <span className="inline-flex rounded-full border border-[rgba(134,155,189,0.18)] bg-[rgba(75,65,225,0.05)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
+                      {formatGraphStatus(job.graph_sync_status)}
+                    </span>
+                  </div>
+                  <h3 className="truncate text-[1.05rem] font-bold leading-6 tracking-[-0.03em] text-[var(--color-text)]">
+                    <Link
+                      href={`/jobs/${job.id}`}
+                      className="relative z-10 inline transition group-hover:text-[var(--color-brand-dark)] group-hover:underline"
+                    >
+                      {job.title}
+                    </Link>
+                  </h3>
+                </div>
+
+                <div className="relative z-20 flex shrink-0 flex-row items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onEdit(job);
+                    }}
+                    className="rounded-full border border-white/70 bg-white/92 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text)] transition hover:bg-white"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDelete(job);
+                    }}
+                    className="rounded-full bg-[var(--color-brand-deep)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_10px_22px_rgba(11,28,48,0.16)]"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
               <Link
                 href={`/jobs/${job.id}`}
-                className="rounded-[12px] bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white"
+                aria-label={`Open job ${job.title}`}
+                className="block rounded-[18px] transition hover:bg-[rgba(75,65,225,0.03)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(75,65,225,0.28)]"
               >
-                Open Workspace
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] uppercase tracking-[0.16em] text-[var(--color-muted)]">
+                  <span>Source {job.source_type}</span>
+                  <span>Parse {job.parse_status}</span>
+                  <span>Confidence {formatConfidence(job.parse_confidence)}</span>
+                  <span>Created {formatDate(job.created_at)}</span>
+                  {job.source_file_name ? <span>File {job.source_file_name}</span> : null}
+                </div>
+
+                {job.graph_sync_status === "failed" && job.graph_sync_error ? (
+                  <p className="mt-2 text-xs leading-5 text-[#8b2d2d]">
+                    Graph sync error: {job.graph_sync_error}
+                  </p>
+                ) : null}
               </Link>
-              <button
-                type="button"
-                onClick={() => onEdit(job)}
-                className="rounded-[12px] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)]"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                onClick={() => onDelete(job)}
-                className="rounded-[12px] bg-[#101114] px-4 py-2 text-sm font-medium text-white"
-              >
-                Delete
-              </button>
             </div>
-          </div>
-
-          <div className="mt-6 space-y-4 text-sm leading-6 text-[var(--color-muted)]">
-            <p>{job.description ?? "No description yet."}</p>
-            <div className="rounded-[16px] bg-[rgba(148,151,169,0.08)] p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
-                Required skills
-              </p>
-              <p className="mt-2">{job.required_skills_text ?? "No required skills captured yet."}</p>
-            </div>
-            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
-              <span>Source {job.source_type}</span>
-              {job.extract_source ? <span>Extract {job.extract_source}</span> : null}
-              <span>Parse {job.parse_status}</span>
-              <span>Engine {job.parse_source}</span>
-              <span>Confidence {formatConfidence(job.parse_confidence)}</span>
-              <span>{formatGraphStatus(job.graph_sync_status)}</span>
-              {job.source_file_name ? <span>File {job.source_file_name}</span> : null}
-            </div>
-            {job.graph_sync_status === "failed" && job.graph_sync_error ? (
-              <p className="text-xs leading-5 text-[#8b2d2d]">
-                Graph sync error: {job.graph_sync_error}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
-            <span>Created {formatDate(job.created_at)}</span>
-            <span>Updated {formatDate(job.updated_at)}</span>
-          </div>
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </div>
   );
 }

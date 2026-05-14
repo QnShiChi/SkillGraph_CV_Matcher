@@ -27,6 +27,7 @@ def get_candidate_by_id(session: Session, candidate_id: int) -> Candidate | None
 
 def create_candidate(session: Session, payload: CandidateCreate) -> Candidate:
     candidate = Candidate(
+        job_id=payload.job_id,
         full_name=payload.full_name,
         email=payload.email,
         resume_text=payload.resume_text,

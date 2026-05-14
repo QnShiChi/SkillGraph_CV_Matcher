@@ -23,8 +23,8 @@ const config: Config = {
         brand: "var(--radius-brand)",
       },
       fontFamily: {
-        display: ["IBM Plex Sans", "Helvetica", "Arial", "sans-serif"],
-        body: ["Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
+        display: ["Inter", "Helvetica", "Arial", "sans-serif"],
+        body: ["Inter", "Helvetica", "Arial", "sans-serif"],
       },
     },
   },

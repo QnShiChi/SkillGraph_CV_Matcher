@@ -1,8 +1,11 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
+
+from app.models.candidate import Candidate
 from app.models.job import Job
+from app.models.match_run import MatchRun
 from app.schemas.job import JobCreate, JobUpdate
 
 
@@ -79,6 +82,8 @@ def update_job(session: Session, job: Job, payload: JobUpdate) -> Job:
 
 
 def delete_job(session: Session, job: Job) -> None:
+    session.execute(delete(MatchRun).where(MatchRun.job_id == job.id))
+    session.execute(delete(Candidate).where(Candidate.job_id == job.id))
     session.delete(job)
     session.commit()
 

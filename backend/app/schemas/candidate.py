@@ -21,6 +21,7 @@ CandidateScreeningDecision = Literal["pass", "reject"]
 
 
 class CandidateCreate(BaseModel):
+    job_id: int | None = None
     full_name: str
     email: EmailStr | None = None
     resume_text: str | None = None
@@ -95,3 +96,33 @@ class CandidateRankingResponse(BaseModel):
     rejected_count: int
     ranked_candidates: list[CandidateRead]
     rejected_candidates: list[CandidateRead]
+
+
+class CandidateKnowledgeGraphNode(BaseModel):
+    id: str
+    label: str
+    status: Literal["possessed", "missing", "related"]
+    subtitle: str
+    category: str | None = None
+
+
+class CandidateKnowledgeGraphEdge(BaseModel):
+    source: str
+    target: str
+    kind: Literal["related", "prerequisite"]
+
+
+class CandidateKnowledgeGraphRead(BaseModel):
+    candidate_id: int
+    candidate_name: str
+    job_id: int | None
+    job_title: str | None
+    graph_sync_status: CandidateGraphSyncStatus
+    available: bool
+    message: str | None
+    node_count: int
+    edge_count: int
+    matched_count: int
+    missing_count: int
+    nodes: list[CandidateKnowledgeGraphNode]
+    edges: list[CandidateKnowledgeGraphEdge]

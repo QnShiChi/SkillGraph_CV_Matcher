@@ -31,6 +31,65 @@ export type Job = {
   updated_at: string;
 };
 
+export type JobKnowledgeGraphNode = {
+  id: string;
+  label: string;
+  kind: "job" | "skill" | "dependency";
+  subtitle: string;
+  category: string | null;
+  importance: number | null;
+  requirement_type: string | null;
+};
+
+export type JobKnowledgeGraphEdge = {
+  source: string;
+  target: string;
+  kind: "requires" | "prerequisite";
+};
+
+export type JobKnowledgeGraph = {
+  job_id: number;
+  title: string;
+  status: string;
+  graph_sync_status: Job["graph_sync_status"];
+  available: boolean;
+  message: string | null;
+  node_count: number;
+  edge_count: number;
+  nodes: JobKnowledgeGraphNode[];
+  edges: JobKnowledgeGraphEdge[];
+};
+
+export type CandidateKnowledgeGraphNode = {
+  id: string;
+  label: string;
+  status: "possessed" | "missing" | "related";
+  subtitle: string;
+  category: string | null;
+};
+
+export type CandidateKnowledgeGraphEdge = {
+  source: string;
+  target: string;
+  kind: "related" | "prerequisite";
+};
+
+export type CandidateKnowledgeGraph = {
+  candidate_id: number;
+  candidate_name: string;
+  job_id: number | null;
+  job_title: string | null;
+  graph_sync_status: Candidate["graph_sync_status"];
+  available: boolean;
+  message: string | null;
+  node_count: number;
+  edge_count: number;
+  matched_count: number;
+  missing_count: number;
+  nodes: CandidateKnowledgeGraphNode[];
+  edges: CandidateKnowledgeGraphEdge[];
+};
+
 export type Candidate = {
   id: number;
   job_id: number | null;
@@ -105,6 +164,7 @@ export type JobInput = {
 export type JobUpdateInput = Partial<JobInput>;
 
 export type CandidateInput = {
+  job_id?: number | null;
   full_name: string;
   email: string | null;
   resume_text: string | null;
@@ -184,6 +244,27 @@ export async function getCandidates(): Promise<Candidate[]> {
   }
 }
 
+export async function getCandidate(candidateId: number): Promise<Candidate | null> {
+  const candidates = await getCandidates();
+  return candidates.find((candidate) => candidate.id === candidateId) ?? null;
+}
+
+export async function getCandidateKnowledgeGraph(candidateId: number): Promise<CandidateKnowledgeGraph | null> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/candidates/${candidateId}/graph`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as CandidateKnowledgeGraph;
+  } catch {
+    return null;
+  }
+}
+
 export async function getJobCandidates(jobId: number): Promise<Candidate[]> {
   try {
     const response = await fetch(`${getApiBaseUrl()}/api/jobs/${jobId}/candidates`, {
@@ -211,6 +292,22 @@ export async function getJobRanking(jobId: number): Promise<CandidateRankingResp
     }
 
     return (await response.json()) as CandidateRankingResponse;
+  } catch {
+    return null;
+  }
+}
+
+export async function getJobKnowledgeGraph(jobId: number): Promise<JobKnowledgeGraph | null> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/jobs/${jobId}/graph`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as JobKnowledgeGraph;
   } catch {
     return null;
   }

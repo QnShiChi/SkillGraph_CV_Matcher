@@ -51,7 +51,7 @@ def test_run_agentscope_candidate_review_raises_clear_error_when_agentscope_miss
 
     monkeypatch.setattr(builtins, "__import__", _fake_import)
 
-    with pytest.raises(AgentScopeUnavailableError, match="AgentScope is not installed"):
+    with pytest.raises(AgentScopeUnavailableError, match="AgentScope is required but is not installed"):
         run_agentscope_candidate_review(
             payload={"candidate_name": "Test Candidate"},
             settings=_make_settings(),

@@ -69,13 +69,13 @@ export default async function OverviewPage() {
 
       <SectionShell title="Current Totals">
         <div className="grid gap-5 md:grid-cols-2">
-          <article className="rounded-[20px] border border-[var(--color-border)] bg-white p-6 shadow-micro">
+          <article className="rounded-[24px] border border-white/70 bg-white/80 p-6 shadow-[0_18px_50px_rgba(10,20,40,0.06)] backdrop-blur-xl">
             <h3 className="text-lg font-semibold">Jobs</h3>
             <p className="mt-3 text-4xl font-bold tracking-[-0.04em] text-[var(--color-text)]">
               {jobs.length}
             </p>
           </article>
-          <article className="rounded-[20px] border border-[var(--color-border)] bg-white p-6 shadow-micro">
+          <article className="rounded-[24px] border border-white/70 bg-white/80 p-6 shadow-[0_18px_50px_rgba(10,20,40,0.06)] backdrop-blur-xl">
             <h3 className="text-lg font-semibold">Candidates</h3>
             <p className="mt-3 text-4xl font-bold tracking-[-0.04em] text-[var(--color-text)]">
               {candidates.length}

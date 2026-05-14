@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { CandidateForm } from "@/components/candidates/candidate-form";
+import { CandidateJobImportForm } from "@/components/candidates/candidate-job-import-form";
 import { CandidateList } from "@/components/candidates/candidate-list";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DrawerPanel } from "@/components/drawer-panel";
@@ -12,8 +13,11 @@ import {
   type Candidate,
   type CandidateInput,
   type CandidateUpdateInput,
+  type Job,
   createCandidate,
   deleteCandidate,
+  getCandidates,
+  importJobCandidatesBulk,
   updateCandidate,
 } from "@/lib/api";
 
@@ -28,8 +32,10 @@ type DrawerState =
 
 export function CandidateAdminClient({
   initialCandidates,
+  initialJobs,
 }: {
   initialCandidates: Candidate[];
+  initialJobs: Job[];
 }) {
   const [candidates, setCandidates] = useState<Candidate[]>(
     normalizeCandidates(initialCandidates),
@@ -40,9 +46,11 @@ export function CandidateAdminClient({
   });
   const [deleteTarget, setDeleteTarget] = useState<Candidate | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const sortedCandidates = [...normalizeCandidates(candidates)].sort(
     (left, right) =>
@@ -52,6 +60,11 @@ export function CandidateAdminClient({
   function openCreateDrawer() {
     setFormError(null);
     setDrawerState({ open: true, mode: "create" });
+  }
+
+  function openImportDrawer() {
+    setImportError(null);
+    setIsImportOpen(true);
   }
 
   function openEditDrawer(candidate: Candidate) {
@@ -66,6 +79,15 @@ export function CandidateAdminClient({
 
     setDrawerState({ open: false, mode: "create" });
     setFormError(null);
+  }
+
+  function closeImportDrawer() {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsImportOpen(false);
+    setImportError(null);
   }
 
   async function handleSubmit(payload: CandidateInput | CandidateUpdateInput) {
@@ -126,20 +148,48 @@ export function CandidateAdminClient({
     }
   }
 
+  async function handleImport(jobId: number, files: File[]) {
+    setIsSubmitting(true);
+    setImportError(null);
+    setListError(null);
+
+    try {
+      await importJobCandidatesBulk(jobId, files);
+      const refreshedCandidates = await getCandidates();
+      setCandidates(normalizeCandidates(refreshedCandidates));
+      setIsImportOpen(false);
+    } catch (error) {
+      setImportError(
+        error instanceof Error ? error.message : "Unable to import CV batch.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Admin"
         title="Candidates"
-        description="Review candidate records imported from job workspaces and maintain manual entries when needed."
+        description="Review candidate records imported from job workspaces, launch CV imports from here, and maintain manual entries when needed."
         action={
-          <button
-            type="button"
-            onClick={openCreateDrawer}
-            className="rounded-[14px] border border-[var(--color-border)] px-5 py-3 text-sm font-semibold text-[var(--color-text)]"
-          >
-            Create Candidate
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={openImportDrawer}
+              className="rounded-full bg-[linear-gradient(135deg,#4b41e1_0%,#3028b4_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(75,65,225,0.24)] transition hover:opacity-95"
+            >
+              Import CV Batch
+            </button>
+            <button
+              type="button"
+              onClick={openCreateDrawer}
+              className="rounded-full border border-white/70 bg-white/80 px-5 py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-white"
+            >
+              Create Candidate
+            </button>
+          </div>
         }
       />
 
@@ -154,7 +204,7 @@ export function CandidateAdminClient({
         </StateCard>
         <StateCard
           title="Workflow"
-          description="Candidates are now imported from job workspaces, then reviewed here as a supporting admin view."
+          description="CV import is available directly from this page, but each imported candidate still belongs to a selected job workspace."
         />
         <StateCard
           title="Storage"
@@ -170,9 +220,24 @@ export function CandidateAdminClient({
 
       <CandidateList
         candidates={sortedCandidates}
+        jobs={initialJobs}
         onEdit={openEditDrawer}
         onDelete={setDeleteTarget}
       />
+
+      <DrawerPanel
+        open={isImportOpen}
+        title="Import Candidates"
+        onClose={closeImportDrawer}
+      >
+        <CandidateJobImportForm
+          jobs={initialJobs}
+          isSubmitting={isSubmitting}
+          errorMessage={importError}
+          onCancel={closeImportDrawer}
+          onSubmit={handleImport}
+        />
+      </DrawerPanel>
 
       <DrawerPanel
         open={drawerState.open}

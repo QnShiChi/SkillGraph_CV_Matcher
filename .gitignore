@@ -12,6 +12,8 @@ venv/
 
 # Local env
 .env
+.codex
+backup/
 backups/
 
 # OS/editor

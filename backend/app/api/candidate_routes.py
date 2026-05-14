@@ -9,11 +9,14 @@ from app.repositories.candidate_repository import (
     list_candidates,
     update_candidate,
 )
+from app.repositories.job_repository import get_job_by_id
 from app.schemas.candidate import (
     CandidateCreate,
+    CandidateKnowledgeGraphRead,
     CandidateRead,
     CandidateUpdate,
 )
+from app.services.candidate_knowledge_graph import get_candidate_knowledge_graph
 
 router = APIRouter(prefix="/api/candidates", tags=["candidates"])
 
@@ -23,11 +26,32 @@ def get_candidates(session: Session = Depends(get_db_session)) -> list[Candidate
     return list_candidates(session)
 
 
+@router.get("/{candidate_id}/graph", response_model=CandidateKnowledgeGraphRead)
+def get_candidate_graph(
+    candidate_id: int,
+    session: Session = Depends(get_db_session),
+) -> CandidateKnowledgeGraphRead:
+    candidate = get_candidate_by_id(session, candidate_id)
+    if candidate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Candidate not found.",
+        )
+
+    return CandidateKnowledgeGraphRead(**get_candidate_knowledge_graph(candidate))
+
+
 @router.post("", response_model=CandidateRead, status_code=status.HTTP_201_CREATED)
 def post_candidate(
     payload: CandidateCreate,
     session: Session = Depends(get_db_session),
 ) -> CandidateRead:
+    if payload.job_id is not None and get_job_by_id(session, payload.job_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found.",
+        )
+
     return create_candidate(session, payload)
 
 @router.put("/{candidate_id}", response_model=CandidateRead)

@@ -83,30 +83,29 @@ def screen_and_rank_job_candidates(
 
         match_payload = _score_candidate(job.structured_jd_json or {}, candidate)
         verified_links = candidate.verified_links_json or []
-        if resolved_settings.matching_review_mode == "agentscope":
-            agentscope_payload = run_agentscope_candidate_review(
-                payload={
-                    "job": job.structured_jd_json or {},
-                    "candidate": candidate.structured_cv_json or {},
-                    "candidate_name": candidate.full_name,
-                    "deterministic_score": match_payload["match_score"],
-                    "deterministic_summary": match_payload["match_summary"],
-                    "verified_links": verified_links,
-                },
-                settings=resolved_settings,
-            )
-            match_payload.update(
-                {
-                    "match_summary": agentscope_payload.get(
-                        "match_summary",
-                        match_payload["match_summary"],
-                    ),
-                    "final_report_json": agentscope_payload.get(
-                        "final_report_json",
-                        match_payload["final_report_json"],
-                    ),
-                }
-            )
+        agentscope_payload = run_agentscope_candidate_review(
+            payload={
+                "job": job.structured_jd_json or {},
+                "candidate": candidate.structured_cv_json or {},
+                "candidate_name": candidate.full_name,
+                "deterministic_score": match_payload["match_score"],
+                "deterministic_summary": match_payload["match_summary"],
+                "verified_links": verified_links,
+            },
+            settings=resolved_settings,
+        )
+        match_payload.update(
+            {
+                "match_summary": agentscope_payload.get(
+                    "match_summary",
+                    match_payload["match_summary"],
+                ),
+                "final_report_json": agentscope_payload.get(
+                    "final_report_json",
+                    match_payload["final_report_json"],
+                ),
+            }
+        )
         candidate.match_score = match_payload["match_score"]
         candidate.match_summary = match_payload["match_summary"]
         candidate.final_report_json = match_payload["final_report_json"]

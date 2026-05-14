@@ -175,3 +175,41 @@ def test_get_job_candidates_returns_only_job_scoped_candidates(client, session) 
     assert response.status_code == 200
     payload = response.json()
     assert [item["full_name"] for item in payload] == ["Alice"]
+
+
+def test_create_candidate_accepts_job_id_and_attaches_candidate_to_workspace(client, session) -> None:
+    job = _create_job(session, title="Data Engineer")
+
+    response = client.post(
+        "/api/candidates",
+        json={
+            "job_id": job.id,
+            "full_name": "Workspace Candidate",
+            "email": None,
+            "resume_text": "Built data pipelines",
+            "skills_text": "Python, SQL",
+            "status": "new",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["job_id"] == job.id
+    assert payload["full_name"] == "Workspace Candidate"
+
+
+def test_create_candidate_returns_404_when_job_id_does_not_exist(client) -> None:
+    response = client.post(
+        "/api/candidates",
+        json={
+            "job_id": 99999,
+            "full_name": "Missing Job Candidate",
+            "email": None,
+            "resume_text": None,
+            "skills_text": None,
+            "status": "new",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Job not found."

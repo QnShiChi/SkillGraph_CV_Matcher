@@ -15,21 +15,16 @@ def run_agentscope_candidate_review(
     payload: dict[str, Any],
     settings: Settings,
 ) -> dict[str, Any]:
-    """Lazy AgentScope seam for future matcher/explainer/critic orchestration.
-
-    The workflow keeps deterministic verification/ranking as the source of truth,
-    then layers AgentScope-based matcher/explainer/critic review on top for
-    richer HR-facing output when enabled.
-    """
+    """Mandatory AgentScope matcher/explainer/critic review for verified candidates."""
     try:
         from agentscope.agent import ReActAgent
         from agentscope.formatter import OpenAIMultiAgentFormatter
         from agentscope.memory import InMemoryMemory
         from agentscope.message import Msg
         from agentscope.model import OpenAIChatModel
-    except ImportError as error:  # pragma: no cover - optional runtime dependency
+    except ImportError as error:  # pragma: no cover - deployment/runtime dependency
         raise AgentScopeUnavailableError(
-            "AgentScope is not installed. Install backend dependencies with agentscope support to enable multi-agent review."
+            "AgentScope is required but is not installed. Install backend dependencies with AgentScope support before running candidate screening."
         ) from error
 
     return asyncio.run(

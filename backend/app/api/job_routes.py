@@ -16,6 +16,7 @@ from app.schemas.candidate import (
     CandidateRead,
 )
 from app.schemas.job import JobCreate, JobRead, JobUpdate
+from app.schemas.job import JobKnowledgeGraphRead
 from app.services.job_import_service import import_job_pdf
 from app.services.candidate_import_service import import_candidate_pdf, import_candidates_bulk
 from app.services.candidate_screening_service import (
@@ -23,6 +24,7 @@ from app.services.candidate_screening_service import (
     screen_and_rank_job_candidates,
 )
 from app.services.agentscope_runner import AgentScopeUnavailableError
+from app.services.job_knowledge_graph import get_job_knowledge_graph
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -91,6 +93,18 @@ def get_job_ranking(job_id: int, session: Session = Depends(get_db_session)) -> 
         )
 
     return CandidateRankingResponse(**get_job_candidate_ranking(session, job_id=job_id))
+
+
+@router.get("/{job_id}/graph", response_model=JobKnowledgeGraphRead)
+def get_job_graph(job_id: int, session: Session = Depends(get_db_session)) -> JobKnowledgeGraphRead:
+    job = get_job_by_id(session, job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found.",
+        )
+
+    return JobKnowledgeGraphRead(**get_job_knowledge_graph(job))
 
 
 @router.post("/{job_id}/screen-and-rank", response_model=CandidateRankingResponse)

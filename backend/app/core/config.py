@@ -1,6 +1,5 @@
 from functools import lru_cache
 from typing import Literal
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,7 +26,7 @@ class Settings(BaseSettings):
     cv_parser_max_output_tokens: int = 12000
     cv_parser_timeout_seconds: int = 90
     cv_parser_enable_fallback: bool = True
-    matching_review_mode: Literal["deterministic", "agentscope"] = "deterministic"
+    matching_review_mode: str = "agentscope"
     matching_review_timeout_seconds: int = 60
 
     model_config = SettingsConfigDict(

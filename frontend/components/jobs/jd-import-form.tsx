@@ -27,7 +27,7 @@ export function JdImportForm({
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
-      <div className="rounded-[16px] bg-[rgba(148,151,169,0.08)] p-4 text-sm leading-6 text-[var(--color-muted)]">
+      <div className="rounded-[20px] border border-[rgba(134,155,189,0.18)] bg-[rgba(75,65,225,0.05)] p-4 text-sm leading-6 text-[var(--color-muted)]">
         Upload a text-based JD PDF with selectable text. Scanned PDFs are not
         supported in this phase, and the system will reject unreadable files.
       </div>
@@ -44,12 +44,12 @@ export function JdImportForm({
           type="file"
           accept="application/pdf,.pdf"
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          className="w-full rounded-[14px] border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)]"
+          className="w-full rounded-[16px] border border-white/70 bg-white/90 px-4 py-3 text-sm text-[var(--color-text)] shadow-[0_10px_24px_rgba(10,20,40,0.04)]"
         />
       </div>
 
       {errorMessage ? (
-        <div className="rounded-[16px] border border-[rgba(183,54,54,0.16)] bg-[rgba(183,54,54,0.06)] px-4 py-3 text-sm text-[#8d2020]">
+        <div className="rounded-[20px] border border-[rgba(183,54,54,0.16)] bg-[rgba(183,54,54,0.06)] px-4 py-3 text-sm text-[#8d2020]">
           {errorMessage}
         </div>
       ) : null}
@@ -58,14 +58,14 @@ export function JdImportForm({
         <button
           type="submit"
           disabled={!file || isSubmitting}
-          className="rounded-[14px] bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-brand-dark)] disabled:cursor-not-allowed disabled:opacity-70"
+          className="rounded-full bg-[linear-gradient(135deg,#4b41e1_0%,#3028b4_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(75,65,225,0.24)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isSubmitting ? "Importing..." : "Import JD PDF"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-[14px] border border-[var(--color-border)] px-5 py-3 text-sm font-medium text-[var(--color-text)]"
+          className="rounded-full border border-white/70 bg-white/80 px-5 py-3 text-sm font-medium text-[var(--color-text)] transition hover:bg-white"
         >
           Cancel
         </button>

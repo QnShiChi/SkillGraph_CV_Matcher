@@ -1,5 +1,8 @@
-import type { Job } from "@/lib/api";
+import type { ReactNode } from "react";
 
+import type { Job, JobKnowledgeGraph } from "@/lib/api";
+
+import { JobKnowledgeGraphView } from "@/components/jobs/job-knowledge-graph";
 import { StateCard } from "@/components/state-card";
 
 type StructuredSkill = {
@@ -48,26 +51,67 @@ function formatConfidence(value: number | null | undefined) {
   return `${Math.round(value * 100)}%`;
 }
 
+function CollapsibleCard({
+  title,
+  description,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  description: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      className="group overflow-hidden rounded-[24px] border border-white/70 bg-white/82 shadow-[0_18px_50px_rgba(10,20,40,0.06)] backdrop-blur-xl"
+    >
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-5 py-4 marker:hidden">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5">
+            <div className="h-2.5 w-2.5 rounded-full bg-[linear-gradient(135deg,#4b41e1_0%,#14b8a6_100%)]" />
+            <h3 className="text-[1.05rem] font-semibold text-[var(--color-text)]">{title}</h3>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">{description}</p>
+        </div>
+        <span className="material-symbols-outlined mt-0.5 text-[20px] text-[var(--color-brand-dark)] transition group-open:rotate-180">
+          expand_more
+        </span>
+      </summary>
+      <div className="border-t border-[rgba(134,155,189,0.18)] px-5 py-4">{children}</div>
+    </details>
+  );
+}
+
 function renderSkillCard(skill: StructuredSkill, showGraphDetails: boolean) {
   return (
-    <article
+    <details
       key={skill.canonical}
-      className="rounded-[16px] border border-[var(--color-border)] p-4"
+      className="group rounded-[20px] border border-[rgba(134,155,189,0.18)] bg-[rgba(75,65,225,0.04)] transition"
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-base font-semibold text-[var(--color-text)]">{skill.name}</h3>
-        <span className="rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-brand-dark)]">
-          {skill.requirement_type}
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 marker:hidden">
+        <h3 className="min-w-0 text-base font-semibold text-[var(--color-text)]">
+          {skill.name}
+        </h3>
+        <span className="material-symbols-outlined text-[20px] text-[var(--color-brand-dark)] transition group-open:rotate-180">
+          expand_more
         </span>
-      </div>
-      <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
-        Canonical: {skill.canonical} · Importance: {skill.importance}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-        Confidence: {formatConfidence(skill.confidence)}
-      </p>
-      {showGraphDetails ? (
-        <>
+      </summary>
+      <div className="border-t border-[rgba(134,155,189,0.18)] px-4 pb-4 pt-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-brand-dark)]">
+            {skill.requirement_type}
+          </span>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
+          Canonical: {skill.canonical} · Importance: {skill.importance}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+          Confidence: {formatConfidence(skill.confidence)}
+        </p>
+        {showGraphDetails ? (
+          <>
           <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
             Groups: {skill.skill_groups.join(", ") || "None"}
           </p>
@@ -77,9 +121,10 @@ function renderSkillCard(skill: StructuredSkill, showGraphDetails: boolean) {
           <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
             Related: {skill.related_skills.join(", ") || "None"}
           </p>
-        </>
-      ) : null}
-    </article>
+          </>
+        ) : null}
+      </div>
+    </details>
   );
 }
 
@@ -88,14 +133,16 @@ function SkillSection({
   description,
   skills,
   showGraphDetails,
+  defaultOpen = false,
 }: {
   title: string;
   description: string;
   skills: StructuredSkill[];
   showGraphDetails: boolean;
+  defaultOpen?: boolean;
 }) {
   return (
-    <StateCard title={title} description={description}>
+    <CollapsibleCard title={title} description={description} defaultOpen={defaultOpen}>
       <div className="space-y-4">
         {skills.length ? (
           skills.map((skill) => renderSkillCard(skill, showGraphDetails))
@@ -105,11 +152,17 @@ function SkillSection({
           </p>
         )}
       </div>
-    </StateCard>
+    </CollapsibleCard>
   );
 }
 
-export function JobStructuredData({ job }: { job: Job }) {
+export function JobStructuredData({
+  job,
+  knowledgeGraph,
+}: {
+  job: Job;
+  knowledgeGraph: JobKnowledgeGraph | null;
+}) {
   const structured = readStructuredJd(job);
   const technicalSkills = structured?.technical_skills ?? structured?.required_skills ?? [];
   const platformsCloud = structured?.platforms_cloud ?? [];
@@ -119,13 +172,14 @@ export function JobStructuredData({ job }: { job: Job }) {
   const softSkills = structured?.soft_skills ?? [];
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-      <div className="space-y-6">
+    <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="space-y-6">
         <StateCard
           title="Normalized JD"
-          description="The normalized text blocks below are the recruiter-facing representation used as the basis for future matching."
+          description="Always-visible recruiter summary for quick recognition."
         >
-          <div className="space-y-5 text-sm leading-7 text-[var(--color-muted)]">
+          <div className="space-y-4 text-sm leading-7 text-[var(--color-muted)]">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
                 Summary
@@ -138,32 +192,35 @@ export function JobStructuredData({ job }: { job: Job }) {
               </p>
               <p className="mt-2">{job.required_skills_text ?? "No required skills extracted yet."}</p>
             </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
-                Responsibilities
-              </p>
-              <p className="mt-2">{job.responsibilities_text ?? "No responsibilities extracted yet."}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
-                Qualifications
-              </p>
-              <p className="mt-2">{job.qualifications_text ?? "No qualifications extracted yet."}</p>
-            </div>
+            <details className="group rounded-[18px] border border-[rgba(134,155,189,0.18)] bg-[rgba(75,65,225,0.04)] px-4 py-3">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:hidden">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
+                  Responsibilities & qualifications
+                </p>
+                <span className="material-symbols-outlined text-[20px] text-[var(--color-brand-dark)] transition group-open:rotate-180">
+                  expand_more
+                </span>
+              </summary>
+              <div className="mt-3 space-y-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
+                    Responsibilities
+                  </p>
+                  <p className="mt-2">{job.responsibilities_text ?? "No responsibilities extracted yet."}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-brand-dark)]">
+                    Qualifications
+                  </p>
+                  <p className="mt-2">{job.qualifications_text ?? "No qualifications extracted yet."}</p>
+                </div>
+              </div>
+            </details>
           </div>
         </StateCard>
+        </div>
 
-        <StateCard
-          title="Raw JD Text"
-          description="This is the original extracted text kept for traceability and future parser upgrades."
-        >
-          <pre className="max-h-[30rem] overflow-auto whitespace-pre-wrap rounded-[16px] bg-[rgba(148,151,169,0.08)] p-4 text-sm leading-7 text-[var(--color-muted)]">
-            {job.raw_jd_text ?? "No raw JD text available."}
-          </pre>
-        </StateCard>
-      </div>
-
-      <div className="space-y-6">
+        <div className="space-y-6">
         <SkillSection
           title="Technical Skills"
           description="Core graph-oriented technical skills that should drive skill matching most strongly."
@@ -199,7 +256,7 @@ export function JobStructuredData({ job }: { job: Job }) {
           showGraphDetails={false}
         />
 
-        <StateCard
+        <CollapsibleCard
           title="Soft Skills"
           description="Non-technical traits extracted from the JD."
         >
@@ -219,13 +276,13 @@ export function JobStructuredData({ job }: { job: Job }) {
               </p>
             )}
           </div>
-        </StateCard>
+        </CollapsibleCard>
 
-        <StateCard
+        <CollapsibleCard
           title="Metadata"
           description="Operational metadata for the imported or manually created job."
         >
-          <div className="space-y-3 text-sm leading-6 text-[var(--color-muted)]">
+          <div className="space-y-2 text-sm leading-6 text-[var(--color-muted)]">
             <p>Source type: {job.source_type}</p>
             <p>Source file: {job.source_file_name ?? "Manual entry"}</p>
             <p>Extract source: {job.extract_source ?? "Manual entry"}</p>
@@ -245,8 +302,11 @@ export function JobStructuredData({ job }: { job: Job }) {
                 : structured.experience_years}
             </p>
           </div>
-        </StateCard>
+        </CollapsibleCard>
       </div>
+      </div>
+
+      <JobKnowledgeGraphView graph={knowledgeGraph} />
     </div>
   );
 }

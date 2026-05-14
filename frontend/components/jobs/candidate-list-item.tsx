@@ -36,28 +36,28 @@ export function CandidateListItem({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-start justify-between gap-4 px-4 py-4 text-left"
+        className="flex w-full items-start justify-between gap-3 px-3 py-3 text-left"
       >
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-semibold text-[var(--color-text)]">
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">
             {title}
           </h3>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">{subtitle}</p>
+          <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">{subtitle}</p>
           {summary ? (
-            <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--color-muted)]">
+            <p className="mt-1 line-clamp-1 text-xs leading-5 text-[var(--color-muted)]">
               {summary}
             </p>
           ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2">
           {badges}
-          <span className="text-sm font-medium text-[var(--color-brand-dark)]">
+          <span className="text-xs font-medium text-[var(--color-brand-dark)]">
             {open ? "Hide" : "Show"}
           </span>
         </div>
       </button>
       {open ? (
-        <div className="border-t border-[var(--color-border)] px-4 py-4">
+        <div className="border-t border-[var(--color-border)] px-3 py-3">
           {detail}
         </div>
       ) : null}

@@ -61,11 +61,73 @@ export type Candidate = {
   match_score: number | null;
   match_rank: number | null;
   match_summary: string | null;
-  final_report_json: Record<string, unknown> | null;
+  final_report_json: CandidateFinalReport | null;
   structured_cv_json: Record<string, unknown> | null;
   status: string;
   created_at: string;
   updated_at: string;
+};
+
+export type GraphScoringSummary = {
+  enabled: boolean;
+  used_fallback: boolean;
+  overlap_score: number;
+  summary: string;
+  exact_matches: string[];
+  prerequisite_matches: Array<{
+    required_skill: string;
+    support_skill: string;
+    credit: number;
+  }>;
+  missing_skills: string[];
+};
+
+export type SkillGapNearGap = {
+  required_skill: string;
+  support_skill: string;
+};
+
+export type SkillGapAnalysis = {
+  ready_skills: string[];
+  near_gap_skills: SkillGapNearGap[];
+  hard_gap_skills: string[];
+  suggested_next_skills: string[];
+  summary: string;
+};
+
+export type RelatedCandidateRecommendation = {
+  candidate_id: number;
+  full_name: string;
+  shared_skills: string[];
+  reason: string;
+  similarity_score?: number;
+  proximity_score?: number;
+};
+
+export type RelatedCandidatesPayload = {
+  similar_candidates: RelatedCandidateRecommendation[];
+  next_best_candidates: RelatedCandidateRecommendation[];
+};
+
+export type RelatedJobRecommendation = {
+  job_id: number;
+  title: string;
+  shared_skills: string[];
+  similarity_score: number;
+  reason: string;
+};
+
+export type CandidateFinalReport = {
+  strengths?: string[];
+  gaps?: string[];
+  verified_links?: Array<Record<string, unknown>>;
+  explanation?: string;
+  critic_review?: string;
+  graph_scoring?: GraphScoringSummary;
+  skill_gap_analysis?: SkillGapAnalysis;
+  related_candidates?: RelatedCandidatesPayload;
+  related_jobs?: RelatedJobRecommendation[];
+  [key: string]: unknown;
 };
 
 export type CandidateBulkImportItem = {

@@ -7,10 +7,17 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.db.neo4j import get_neo4j_driver
 from app.models.candidate import Candidate
 from app.repositories.candidate_repository import list_candidates_for_job
 from app.repositories.job_repository import get_job_by_id
 from app.services.agentscope_runner import run_agentscope_candidate_review
+from app.services.graph_match_service import build_graph_skill_breakdown
+from app.services.graph_job_recommendation_service import build_related_jobs
+from app.services.graph_recommendation_service import (
+    build_next_best_candidates,
+    build_similar_candidates,
+)
 
 
 URL_PATTERN = re.compile(r"https?://[^\s<>()\"]+")
@@ -81,7 +88,16 @@ def screen_and_rank_job_candidates(
             rejected_candidates.append(candidate)
             continue
 
-        match_payload = _score_candidate(job.structured_jd_json or {}, candidate)
+        graph_breakdown = _load_graph_breakdown(job_id=job.id, candidate_id=candidate.id)
+        related_candidates = _load_related_candidates(job_id=job.id, candidate_id=candidate.id)
+        related_jobs = _load_related_jobs(job_id=job.id)
+        match_payload = _score_candidate(
+            job.structured_jd_json or {},
+            candidate,
+            graph_breakdown=graph_breakdown,
+        )
+        match_payload["final_report_json"]["related_candidates"] = related_candidates
+        match_payload["final_report_json"]["related_jobs"] = related_jobs
         verified_links = candidate.verified_links_json or []
         if resolved_settings.matching_review_mode == "agentscope":
             agentscope_payload = run_agentscope_candidate_review(
@@ -95,16 +111,17 @@ def screen_and_rank_job_candidates(
                 },
                 settings=resolved_settings,
             )
+            merged_report = {
+                **(match_payload["final_report_json"] or {}),
+                **(agentscope_payload.get("final_report_json") or {}),
+            }
             match_payload.update(
                 {
                     "match_summary": agentscope_payload.get(
                         "match_summary",
                         match_payload["match_summary"],
                     ),
-                    "final_report_json": agentscope_payload.get(
-                        "final_report_json",
-                        match_payload["final_report_json"],
-                    ),
+                    "final_report_json": merged_report,
                 }
             )
         candidate.match_score = match_payload["match_score"]
@@ -118,6 +135,14 @@ def screen_and_rank_job_candidates(
             candidate.full_name.lower(),
         )
     )
+    ranked_candidate_ids = {candidate.id for candidate in ranked_candidates}
+    for candidate in ranked_candidates:
+        if candidate.final_report_json:
+            candidate.final_report_json["related_candidates"] = _filter_related_candidates(
+                candidate.final_report_json.get("related_candidates"),
+                allowed_candidate_ids=ranked_candidate_ids,
+                current_candidate_id=candidate.id,
+            )
     for index, candidate in enumerate(ranked_candidates, start=1):
         candidate.match_rank = index
 
@@ -171,6 +196,89 @@ def _apply_verification(candidate: Candidate, verification: dict) -> None:
     candidate.verified_links_json = verification["verified_links_json"]
     candidate.screening_decision = verification["screening_decision"]
     candidate.screening_reason = verification["screening_reason"]
+
+
+def _load_graph_breakdown(*, job_id: int, candidate_id: int) -> dict | None:
+    driver = None
+    try:
+        driver = get_neo4j_driver()
+        return build_graph_skill_breakdown(
+            driver=driver,
+            job_id=job_id,
+            candidate_id=candidate_id,
+        )
+    except Exception:
+        return None
+    finally:
+        if driver is not None:
+            driver.close()
+
+
+def _load_related_candidates(*, job_id: int, candidate_id: int) -> dict:
+    driver = None
+    try:
+        driver = get_neo4j_driver()
+        return {
+            "similar_candidates": build_similar_candidates(
+                driver=driver,
+                job_id=job_id,
+                candidate_id=candidate_id,
+            ),
+            "next_best_candidates": build_next_best_candidates(
+                driver=driver,
+                job_id=job_id,
+                candidate_id=candidate_id,
+            ),
+        }
+    except Exception:
+        return {
+            "similar_candidates": [],
+            "next_best_candidates": [],
+        }
+    finally:
+        if driver is not None:
+            driver.close()
+
+
+def _load_related_jobs(*, job_id: int) -> list[dict]:
+    driver = None
+    try:
+        driver = get_neo4j_driver()
+        return build_related_jobs(driver=driver, job_id=job_id)
+    except Exception:
+        return []
+    finally:
+        if driver is not None:
+            driver.close()
+
+
+def _filter_related_candidates(
+    payload: dict | None,
+    *,
+    allowed_candidate_ids: set[int],
+    current_candidate_id: int,
+) -> dict:
+    if not payload:
+        return {
+            "similar_candidates": [],
+            "next_best_candidates": [],
+        }
+
+    def _keep(items: list[dict] | None) -> list[dict]:
+        filtered: list[dict] = []
+        for item in items or []:
+            candidate_id = item.get("candidate_id")
+            if candidate_id == current_candidate_id:
+                continue
+            if candidate_id not in allowed_candidate_ids:
+                continue
+            filtered.append(item)
+        return filtered
+
+    return {
+        "similar_candidates": _keep(payload.get("similar_candidates")),
+        "next_best_candidates": _keep(payload.get("next_best_candidates")),
+    }
 
 
 def _verify_candidate(candidate: Candidate) -> dict:
@@ -402,9 +510,13 @@ def _slug_tokens(url: str) -> str:
     return f"{parsed.netloc} {path}".strip()
 
 
-def _score_candidate(job_payload: dict, candidate: Candidate) -> dict:
+def _score_candidate(
+    job_payload: dict,
+    candidate: Candidate,
+    *,
+    graph_breakdown: dict | None = None,
+) -> dict:
     candidate_payload = candidate.structured_cv_json or {}
-    required_skills = _collect_skill_names(job_payload, ("required_skills",))
     must_have_skills = {
         skill["canonical"]
         for skill in job_payload.get("required_skills", [])
@@ -426,7 +538,11 @@ def _score_candidate(job_payload: dict, candidate: Candidate) -> dict:
     matched_must_have = must_have_skills & candidate_skills
 
     must_have_score = len(matched_must_have) / len(must_have_skills) if must_have_skills else 1.0
-    overlap_score = len(matched_required) / len(job_skills) if job_skills else 0.0
+    overlap_score = (
+        graph_breakdown["overlap_score"]
+        if graph_breakdown and graph_breakdown.get("graph_available")
+        else (len(matched_required) / len(job_skills) if job_skills else 0.0)
+    )
     verified_links = candidate.verified_links_json or []
     project_score = min(len(verified_links), 2) / 2 if verified_links else 0.0
     experience_score = 1.0 if candidate_payload.get("experience") else 0.4
@@ -446,23 +562,161 @@ def _score_candidate(job_payload: dict, candidate: Candidate) -> dict:
     )
 
     strengths = sorted(matched_required)
-    gaps = missing_required
+    graph_scoring = {
+        "enabled": graph_breakdown is not None,
+        "used_fallback": not bool(graph_breakdown and graph_breakdown.get("graph_available")),
+        "exact_matches": list(graph_breakdown.get("exact_matches", [])) if graph_breakdown else [],
+        "prerequisite_matches": (
+            list(graph_breakdown.get("prerequisite_matches", [])) if graph_breakdown else []
+        ),
+        "missing_skills": (
+            list(graph_breakdown.get("missing_skills", [])) if graph_breakdown else missing_required
+        ),
+        "overlap_score": overlap_score,
+    }
+    graph_scoring["summary"] = _build_graph_scoring_summary(graph_scoring)
+    skill_gap_analysis = _build_skill_gap_analysis(graph_scoring)
+    gaps = graph_scoring["missing_skills"]
     return {
         "match_score": overall_score,
         "match_summary": (
-            f"Matched {len(matched_required)}/{len(job_skills) or 0} job skills and "
-            f"{len(matched_must_have)}/{len(must_have_skills) or 0} must-have skills."
+            f"Matched {len(graph_scoring['exact_matches'])} exact skill(s) and "
+            f"{len(graph_scoring['prerequisite_matches'])} prerequisite-supported skill(s)."
+            if graph_breakdown
+            else (
+                f"Matched {len(matched_required)}/{len(job_skills) or 0} job skills and "
+                f"{len(matched_must_have)}/{len(must_have_skills) or 0} must-have skills."
+            )
         ),
         "final_report_json": {
             "strengths": strengths,
             "gaps": gaps,
             "verified_links": verified_links,
+            "graph_scoring": graph_scoring,
+            "skill_gap_analysis": skill_gap_analysis,
             "explanation": (
-                f"{candidate.full_name} passed verification and matched {len(strengths)} core skill(s)."
+                (
+                    f"{candidate.full_name} passed verification and received graph-aware partial credit where direct skill matches were missing."
+                )
+                if graph_breakdown
+                else f"{candidate.full_name} passed verification and matched {len(strengths)} core skill(s)."
             ),
             "critic_review": "Deterministic workflow output reviewed for evidence consistency.",
         },
     }
+
+
+def _build_graph_scoring_summary(graph_scoring: dict) -> str:
+    if graph_scoring["used_fallback"]:
+        return "Graph scoring unavailable. Showing direct skill overlap fallback."
+
+    exact = graph_scoring.get("exact_matches", [])
+    prerequisite = graph_scoring.get("prerequisite_matches", [])
+    missing = graph_scoring.get("missing_skills", [])
+
+    parts: list[str] = []
+    if exact:
+        parts.append(f"Strong direct match on {_format_skill_list(exact[:3])}.")
+    if prerequisite:
+        first = prerequisite[0]
+        parts.append(
+            f"Prerequisite support for {_format_skill_label(first['required_skill'])} through {_format_skill_label(first['support_skill'])}."
+        )
+    if missing:
+        parts.append(f"Still missing {_format_skill_list(missing[:3])}.")
+    if not parts:
+        return "Graph scoring found no meaningful skill support."
+
+    return " ".join(parts)
+
+
+def _build_skill_gap_analysis(graph_scoring: dict) -> dict:
+    ready_skills = list(graph_scoring.get("exact_matches", []))
+    near_gap_skills = [
+        {
+            "required_skill": item["required_skill"],
+            "support_skill": item["support_skill"],
+        }
+        for item in graph_scoring.get("prerequisite_matches", [])
+    ]
+    hard_gap_skills = list(graph_scoring.get("missing_skills", []))
+
+    suggested_next_skills = [item["required_skill"] for item in near_gap_skills]
+    for skill in hard_gap_skills:
+        if len(suggested_next_skills) >= 3:
+            break
+        suggested_next_skills.append(skill)
+
+    return {
+        "ready_skills": ready_skills,
+        "near_gap_skills": near_gap_skills,
+        "hard_gap_skills": hard_gap_skills,
+        "suggested_next_skills": suggested_next_skills[:3],
+        "summary": _build_skill_gap_summary(
+            ready_skills=ready_skills,
+            near_gap_skills=near_gap_skills,
+            hard_gap_skills=hard_gap_skills,
+        ),
+    }
+
+
+def _build_skill_gap_summary(
+    *,
+    ready_skills: list[str],
+    near_gap_skills: list[dict],
+    hard_gap_skills: list[str],
+) -> str:
+    parts: list[str] = []
+    if ready_skills:
+        parts.append(f"Ready on {_format_skill_list(ready_skills[:3])}.")
+    if near_gap_skills:
+        first = near_gap_skills[0]
+        parts.append(
+            f"Close on {_format_skill_label(first['required_skill'])} through {_format_skill_label(first['support_skill'])}."
+        )
+    if hard_gap_skills:
+        parts.append(f"Still missing {_format_skill_list(hard_gap_skills[:3])}.")
+    if not parts:
+        return "No meaningful skill-gap insight available."
+
+    return " ".join(parts)
+
+
+def _format_skill_list(skills: list[str]) -> str:
+    return ", ".join(_format_skill_label(skill) for skill in skills)
+
+
+def _format_skill_label(skill: str) -> str:
+    mapping = {
+        "ai_llm_apis": "AI/LLM APIs",
+        "ai_powered_features": "AI-powered features",
+        "artificial_intelligence": "Artificial Intelligence",
+        "ci_cd": "CI/CD",
+        "docker": "Docker",
+        "express_js": "Express.js",
+        "fastapi": "FastAPI",
+        "git": "Git",
+        "github": "GitHub",
+        "java": "Java",
+        "javascript": "JavaScript",
+        "jwt": "JWT",
+        "mongodb": "MongoDB",
+        "mysql": "MySQL",
+        "node_js": "Node.js",
+        "postgresql": "PostgreSQL",
+        "python": "Python",
+        "react": "React",
+        "rest_api": "REST API",
+        "spring_boot": "Spring Boot",
+        "sql": "SQL",
+        "sql_server": "SQL Server",
+        "typescript": "TypeScript",
+        "version_control": "Version Control",
+    }
+    if skill in mapping:
+        return mapping[skill]
+
+    return skill.replace("_", " ").strip().title()
 
 
 def _collect_skill_names(payload: dict, groups: tuple[str, ...]) -> set[str]:

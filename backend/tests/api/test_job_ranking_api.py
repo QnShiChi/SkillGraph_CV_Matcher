@@ -133,7 +133,55 @@ def test_get_job_ranking_returns_persisted_results(client, session) -> None:
     candidate.match_score = 88.5
     candidate.match_rank = 1
     candidate.match_summary = "Matched 2/2 job skills."
-    candidate.final_report_json = {"strengths": ["python", "fastapi"], "gaps": []}
+    candidate.final_report_json = {
+        "strengths": ["python", "fastapi"],
+        "gaps": [],
+        "graph_scoring": {
+            "enabled": True,
+            "used_fallback": False,
+            "exact_matches": ["python", "fastapi"],
+            "prerequisite_matches": [],
+            "missing_skills": [],
+            "overlap_score": 1.0,
+            "summary": "Strong direct match on python, fastapi.",
+        },
+        "skill_gap_analysis": {
+            "ready_skills": ["python", "fastapi"],
+            "near_gap_skills": [],
+            "hard_gap_skills": [],
+            "suggested_next_skills": [],
+            "summary": "Ready on python, fastapi.",
+        },
+        "related_candidates": {
+            "similar_candidates": [
+                {
+                    "candidate_id": 2,
+                    "full_name": "LONG NGUYEN",
+                    "shared_skills": ["python"],
+                    "similarity_score": 0.5,
+                    "reason": "Shares backend strengths.",
+                }
+            ],
+            "next_best_candidates": [
+                {
+                    "candidate_id": 3,
+                    "full_name": "HONG NGUYEN",
+                    "shared_skills": ["java"],
+                    "proximity_score": 0.4,
+                    "reason": "Also aligns with this job.",
+                }
+            ],
+        },
+        "related_jobs": [
+            {
+                "job_id": 18,
+                "title": "Backend Engineer",
+                "shared_skills": ["python", "fastapi"],
+                "similarity_score": 0.75,
+                "reason": "Shares core backend requirements.",
+            }
+        ],
+    }
     session.add(candidate)
     session.commit()
 
@@ -146,6 +194,11 @@ def test_get_job_ranking_returns_persisted_results(client, session) -> None:
     assert payload["rejected_count"] == 0
     assert payload["ranked_candidates"][0]["full_name"] == "Persisted Candidate"
     assert payload["ranked_candidates"][0]["match_rank"] == 1
+    assert payload["ranked_candidates"][0]["final_report_json"]["graph_scoring"]["overlap_score"] == 1.0
+    assert payload["ranked_candidates"][0]["final_report_json"]["graph_scoring"]["summary"] == "Strong direct match on python, fastapi."
+    assert payload["ranked_candidates"][0]["final_report_json"]["skill_gap_analysis"]["ready_skills"] == ["python", "fastapi"]
+    assert payload["ranked_candidates"][0]["final_report_json"]["related_candidates"]["similar_candidates"][0]["full_name"] == "LONG NGUYEN"
+    assert payload["ranked_candidates"][0]["final_report_json"]["related_jobs"][0]["title"] == "Backend Engineer"
 
 
 def test_screen_and_rank_job_candidates_endpoint_returns_404_for_missing_job(client) -> None:

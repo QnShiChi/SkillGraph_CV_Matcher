@@ -12,7 +12,6 @@ venv/
 
 # Local env
 .env
-backups/
 
 # OS/editor
 .DS_Store

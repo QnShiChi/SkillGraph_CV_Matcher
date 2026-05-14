@@ -13,8 +13,7 @@ venv/
 # Local env
 .env
 .codex
-backup/
-backups/
+backup
 
 # OS/editor
 .DS_Store

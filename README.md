@@ -53,17 +53,19 @@ make backup-db
 ```
 
 This writes a dump file to `backups/postgres/` using a timestamped filename.
+The backup is a plain PostgreSQL SQL file (`.sql`) that can be inspected or restored with `psql`.
 
 Restore a specific backup version:
 
 ```bash
-make restore BACKUP_FILE=backups/postgres/skillgraph-20260511-153000.dump
+make restore BACKUP_FILE=backups/postgres/skillgraph-20260511-153000.sql
 ```
 
 Notes:
 
 - `make backup-db` and `make restore` expect the PostgreSQL container to be running
 - `make restore` restores into the current `POSTGRES_DB` configured in `.env`
+- `make restore` uses `psql`, so `BACKUP_FILE` must point to a `.sql` file
 - choose the backup version by passing `BACKUP_FILE=...`
 
 ## Local URLs
@@ -256,6 +258,6 @@ Notes:
 - `make restart`: restart the full stack
 - `make logs`: tail Docker Compose logs
 - `make ps`: show service status
-- `make backup-db`: create a timestamped PostgreSQL dump in `backups/postgres/`
-- `make restore BACKUP_FILE=...`: restore PostgreSQL from a chosen dump file
+- `make backup-db`: create a timestamped PostgreSQL `.sql` backup in `backups/postgres/`
+- `make restore BACKUP_FILE=...`: restore PostgreSQL from a chosen `.sql` backup using `psql`
 - `make migrate`: apply the latest Alembic migration to PostgreSQL

@@ -13,6 +13,7 @@ import {
   getJobRanking,
   screenAndRankJobCandidates,
 } from "@/lib/api";
+import { formatScreenAndRankErrorMessage } from "@/lib/ranking-error-message";
 
 function normalizeCandidates(value: Candidate[] | null | undefined): Candidate[] {
   return Array.isArray(value) ? value : [];
@@ -197,7 +198,9 @@ export function JobCandidatePanel({
       await refreshCandidates();
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Unable to screen and rank candidates for this job.",
+        formatScreenAndRankErrorMessage(
+          error instanceof Error ? error.message : "Unable to screen and rank candidates for this job.",
+        ),
       );
     } finally {
       setIsRanking(false);

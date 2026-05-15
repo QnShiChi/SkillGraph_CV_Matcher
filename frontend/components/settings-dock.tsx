@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   clearOpenRouterApiKey,
+  getOpenRouterApiKeyStatus,
   getOpenRouterConnectionStatus,
   saveOpenRouterApiKey,
   validateOpenRouterApiKey,
@@ -25,11 +26,18 @@ export function SettingsDock() {
 
     async function loadStatus() {
       try {
-        const status = await getOpenRouterConnectionStatus();
+        const [apiKeyStatus, connectionStatusResult] = await Promise.all([
+          getOpenRouterApiKeyStatus(),
+          getOpenRouterConnectionStatus(),
+        ]);
         if (isMounted) {
-          setConnectionStatus(status.connection_status);
-          setHasApiKey(status.connection_status === "connected");
-          setErrorMessage(status.detail && status.connection_status === "failed" ? status.detail : null);
+          setHasApiKey(apiKeyStatus.has_openrouter_api_key);
+          setConnectionStatus(connectionStatusResult.connection_status);
+          setErrorMessage(
+            connectionStatusResult.detail && connectionStatusResult.connection_status === "failed"
+              ? connectionStatusResult.detail
+              : null,
+          );
         }
       } catch {
         if (isMounted) {
@@ -132,10 +140,14 @@ export function SettingsDock() {
             ref={inputRef}
             aria-label="OpenRouter API key"
             className="w-full rounded-[16px] border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-muted)] focus:border-[rgba(75,65,225,0.45)] focus:ring-2 focus:ring-[rgba(75,65,225,0.12)]"
-            placeholder={isLoading || hasApiKey ? "Key saved on server" : "Paste your key here"}
+            placeholder={isLoading || hasApiKey ? "Key saved in database" : "Paste your key here"}
             type="password"
           />
         </label>
+
+        <p className="mt-2 text-xs font-medium text-[var(--color-muted)]">
+          {hasApiKey ? "A key is already saved in the database." : "No API key is saved yet."}
+        </p>
 
         <div className="mt-3 flex items-center gap-2 text-xs font-semibold">
           {connectionStatus === "connected" ? (
@@ -221,6 +233,10 @@ export function SettingsDock() {
           <span className="flex items-center gap-1 rounded-full bg-[rgba(239,68,68,0.10)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-red-600">
             <span className="material-symbols-outlined text-[14px]">error</span>
             Failed
+          </span>
+        ) : hasApiKey ? (
+          <span className="rounded-full bg-[rgba(22,163,74,0.10)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-success-text)]">
+            Saved
           </span>
         ) : (
           <span className="rounded-full bg-[rgba(148,151,169,0.12)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">

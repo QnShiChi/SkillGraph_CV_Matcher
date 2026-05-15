@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-import type { Candidate, CandidateKnowledgeGraph, Job } from "@/lib/api";
+import type {
+  Candidate,
+  CandidateJobRecommendationItem,
+  CandidateKnowledgeGraph,
+  Job,
+} from "@/lib/api";
 
 import { SkillGraphVisualization } from "@/components/candidates/skill-graph-visualization";
 import { PageHeader } from "@/components/page-header";
@@ -106,10 +111,12 @@ export function CandidateProfileView({
   candidate,
   job,
   candidateGraph,
+  recommendations,
 }: {
   candidate: Candidate;
   job: Job | null;
   candidateGraph: CandidateKnowledgeGraph | null;
+  recommendations: CandidateJobRecommendationItem[];
 }) {
   const structured = readStructuredCv(candidate);
   const verifiedLinks = readVerifiedLinks(candidate);
@@ -426,6 +433,99 @@ export function CandidateProfileView({
           </div>
         </details>
       </div>
+
+      <StateCard
+        title="Alternative Job Matches"
+        description="Fallback job suggestions for this candidate when the current workspace fit is weak or rejected."
+      >
+        <div className="space-y-4">
+          {recommendations.length ? (
+            recommendations.map((recommendation) => (
+              <div
+                key={recommendation.job.id}
+                className="rounded-[24px] border border-[rgba(134,155,189,0.18)] bg-[rgba(75,65,225,0.05)] p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-brand-dark)]">
+                      Suggested job
+                    </p>
+                    <h3 className="mt-2 text-lg font-semibold text-[var(--color-text)]">
+                      {recommendation.job.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+                      {recommendation.match_summary}
+                    </p>
+                  </div>
+                  <div className="rounded-[20px] border border-white/70 bg-white/90 px-4 py-3 text-right">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                      Match fit
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-[var(--color-text)]">
+                      {toHundredPointScore(recommendation.match_score)}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-success-text)]">
+                      Matching strengths
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {recommendation.strengths.length ? (
+                        recommendation.strengths.map((skill) => (
+                          <span
+                            key={`${recommendation.job.id}-${skill}`}
+                            className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-success-text)]"
+                          >
+                            {skill}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-sm text-[var(--color-muted)]">No overlapping core skills yet.</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d2020]">
+                      Remaining gaps
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {recommendation.gaps.length ? (
+                        recommendation.gaps.slice(0, 6).map((skill) => (
+                          <span
+                            key={`${recommendation.job.id}-gap-${skill}`}
+                            className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[#8d2020]"
+                          >
+                            {skill}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-sm text-[var(--color-muted)]">No obvious skill gaps for this job.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <Link
+                    href={`/jobs/${recommendation.job.id}`}
+                    className="inline-flex rounded-full border border-[rgba(134,155,189,0.18)] bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:border-[rgba(75,65,225,0.32)] hover:text-[var(--color-brand-dark)]"
+                  >
+                    Open suggested job
+                  </Link>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm leading-6 text-[var(--color-muted)]">
+              No alternative job suggestions are available yet because the system could not find another structured job with a positive skill overlap for this candidate.
+            </p>
+          )}
+        </div>
+      </StateCard>
 
       <SkillGraphVisualization graph={candidateGraph} />
     </div>

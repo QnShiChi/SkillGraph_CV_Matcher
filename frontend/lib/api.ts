@@ -154,6 +154,20 @@ export type CandidateRankingResponse = {
   rejected_candidates: Candidate[];
 };
 
+export type CandidateJobRecommendationItem = {
+  job: Job;
+  match_score: number;
+  match_summary: string;
+  strengths: string[];
+  gaps: string[];
+};
+
+export type CandidateJobRecommendations = {
+  candidate_id: number;
+  current_job_id: number | null;
+  recommendations: CandidateJobRecommendationItem[];
+};
+
 export type JobInput = {
   title: string;
   description: string | null;
@@ -260,6 +274,24 @@ export async function getCandidateKnowledgeGraph(candidateId: number): Promise<C
     }
 
     return (await response.json()) as CandidateKnowledgeGraph;
+  } catch {
+    return null;
+  }
+}
+
+export async function getCandidateJobRecommendations(
+  candidateId: number,
+): Promise<CandidateJobRecommendations | null> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/candidates/${candidateId}/job-recommendations`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as CandidateJobRecommendations;
   } catch {
     return null;
   }

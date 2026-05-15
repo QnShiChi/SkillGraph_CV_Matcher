@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
 
 import { CandidateProfileView } from "@/components/candidates/candidate-profile-view";
-import { getCandidate, getCandidateKnowledgeGraph, getJob } from "@/lib/api";
+import {
+  getCandidate,
+  getCandidateJobRecommendations,
+  getCandidateKnowledgeGraph,
+  getJob,
+} from "@/lib/api";
 
 export default async function CandidateProfilePage({
   params,
@@ -16,8 +21,18 @@ export default async function CandidateProfilePage({
     notFound();
   }
 
-  const job = candidate.job_id ? await getJob(candidate.job_id) : null;
-  const candidateGraph = await getCandidateKnowledgeGraph(numericCandidateId);
+  const [job, candidateGraph, recommendations] = await Promise.all([
+    candidate.job_id ? getJob(candidate.job_id) : Promise.resolve(null),
+    getCandidateKnowledgeGraph(numericCandidateId),
+    getCandidateJobRecommendations(numericCandidateId),
+  ]);
 
-  return <CandidateProfileView candidate={candidate} job={job} candidateGraph={candidateGraph} />;
+  return (
+    <CandidateProfileView
+      candidate={candidate}
+      job={job}
+      candidateGraph={candidateGraph}
+      recommendations={recommendations?.recommendations ?? []}
+    />
+  );
 }

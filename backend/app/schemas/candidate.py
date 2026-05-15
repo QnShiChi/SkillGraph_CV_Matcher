@@ -3,6 +3,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
+from app.schemas.job import JobRead
+
 
 CandidateStatus = Literal["new", "reviewed", "matched"]
 CandidateSourceType = Literal["manual", "cv_pdf"]
@@ -96,6 +98,20 @@ class CandidateRankingResponse(BaseModel):
     rejected_count: int
     ranked_candidates: list[CandidateRead]
     rejected_candidates: list[CandidateRead]
+
+
+class CandidateJobRecommendationItem(BaseModel):
+    job: JobRead
+    match_score: float
+    match_summary: str
+    strengths: list[str]
+    gaps: list[str]
+
+
+class CandidateJobRecommendationsRead(BaseModel):
+    candidate_id: int
+    current_job_id: int | None
+    recommendations: list[CandidateJobRecommendationItem]
 
 
 class CandidateKnowledgeGraphNode(BaseModel):

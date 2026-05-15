@@ -12,9 +12,13 @@ from app.repositories.candidate_repository import (
 from app.repositories.job_repository import get_job_by_id
 from app.schemas.candidate import (
     CandidateCreate,
+    CandidateJobRecommendationsRead,
     CandidateKnowledgeGraphRead,
     CandidateRead,
     CandidateUpdate,
+)
+from app.services.candidate_job_recommendation_service import (
+    get_candidate_job_recommendations,
 )
 from app.services.candidate_knowledge_graph import get_candidate_knowledge_graph
 
@@ -39,6 +43,26 @@ def get_candidate_graph(
         )
 
     return CandidateKnowledgeGraphRead(**get_candidate_knowledge_graph(candidate))
+
+
+@router.get(
+    "/{candidate_id}/job-recommendations",
+    response_model=CandidateJobRecommendationsRead,
+)
+def get_candidate_job_matches(
+    candidate_id: int,
+    session: Session = Depends(get_db_session),
+) -> CandidateJobRecommendationsRead:
+    candidate = get_candidate_by_id(session, candidate_id)
+    if candidate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Candidate not found.",
+        )
+
+    return CandidateJobRecommendationsRead(
+        **get_candidate_job_recommendations(session, candidate=candidate)
+    )
 
 
 @router.post("", response_model=CandidateRead, status_code=status.HTTP_201_CREATED)

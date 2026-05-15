@@ -4,100 +4,100 @@ import { SectionShell } from "@/components/section-shell";
 const quickStartSteps = [
   {
     step: "1",
-    title: "Open Settings",
+    title: "Mở Settings",
     detail:
-      "Click the Settings dock at the bottom-left corner to open API Configuration before using AI-assisted parsing.",
+      "Bấm nút Settings ở góc trái dưới để kiểm tra trạng thái API key trước khi dùng các chức năng cần OpenRouter.",
   },
   {
     step: "2",
-    title: "Connect OpenRouter",
+    title: "Kết nối OpenRouter",
     detail:
-      "Paste your OpenRouter API key, then press Save. Wait for the green Connected status before continuing.",
+      "Dán OpenRouter API key, bấm Save, rồi chờ trạng thái Connected. Nếu key đã lưu trong DB thì app sẽ tự kết nối khi khởi động.",
   },
   {
     step: "3",
-    title: "Import a Job Description",
+    title: "Tạo hoặc nhập Job",
     detail:
-      "Use the Import JD button in the sidebar to upload a JD PDF or create a job record from your hiring brief.",
+      "Dùng Import JD để nhập JD từ PDF hoặc tạo job thủ công từ nhu cầu tuyển dụng.",
   },
   {
     step: "4",
-    title: "Upload Candidate CVs",
+    title: "Import CV ứng viên",
     detail:
-      "Open the target job and import candidate CV PDFs into that workspace so the system can parse and attach them correctly.",
+      "Mở job cần xử lý, sau đó import CV PDF vào đúng workspace để hệ thống gắn ứng viên vào job đó.",
   },
   {
     step: "5",
-    title: "Run Screening and Ranking",
+    title: "Chạy screening và ranking",
     detail:
-      "From the job workspace, trigger screening to score candidates, review evidence, and produce a ranked shortlist.",
+      "Trong job workspace, bấm Run Screening & Ranking để chấm điểm, kiểm tra evidence và tạo danh sách xếp hạng.",
   },
   {
     step: "6",
-    title: "Compare Top Candidates",
+    title: "So sánh ứng viên",
     detail:
-      "Open the benchmarking view to compare strengths, gaps, scores, and supporting evidence side by side.",
+      "Mở benchmarking để xem song song điểm mạnh, điểm yếu, điểm số và bằng chứng hỗ trợ của các ứng viên nổi bật.",
   },
 ];
 
 const workflowGroups = [
   {
-    title: "API Configuration",
+    title: "Cấu Hình API",
     icon: "vpn_key",
     bullets: [
-      "Open Settings from the bottom-left corner of the dashboard shell.",
-      "Paste a valid OpenRouter API key into the password field.",
-      "Press Save and confirm the connection badge turns green with Connected.",
-      "If the badge turns red with Failed, correct the key and save again before importing any JD or CV.",
+      "Mở Settings ở góc trái dưới màn hình.",
+      "Dán OpenRouter API key vào ô nhập.",
+      "Bấm Save và kiểm tra badge chuyển sang Connected.",
+      "Nếu badge báo Failed, hãy sửa lại key hoặc reconnect từ cùng khung Settings.",
     ],
   },
   {
-    title: "Job Intake",
+    title: "Nhập Job",
     icon: "upload_file",
     bullets: [
-      "Click Import JD in the left sidebar.",
-      "Upload a text-based JD PDF or enter the job content in the provided form.",
-      "Wait for the platform to parse the document and create a job entry.",
-      "Open Jobs to verify the title, parsed structure, and graph sync status.",
+      "Bấm Import JD ở thanh bên trái.",
+      "Upload file JD PDF hoặc tạo job bằng form thủ công.",
+      "Chờ hệ thống parse nội dung và tạo bản ghi job.",
+      "Vào Jobs để kiểm tra tiêu đề, dữ liệu đã parse và trạng thái graph sync.",
     ],
   },
   {
-    title: "Candidate Intake",
+    title: "Nhập Ứng Viên",
     icon: "person_add",
     bullets: [
-      "Open a job workspace before importing candidate files.",
-      "Upload candidate CV PDFs so each profile stays linked to the correct job.",
-      "Review extracted skills, parse status, and any graph sync issues after import.",
-      "Use batch import when you need to process many CVs for the same role.",
+      "Mở đúng job workspace trước khi import CV.",
+      "Upload CV PDF để mỗi hồ sơ được gắn với đúng job.",
+      "Kiểm tra skills trích xuất, parse status và graph sync sau khi import.",
+      "Dùng bulk import khi cần xử lý nhiều CV cho cùng một vị trí.",
     ],
   },
   {
-    title: "Evaluation",
+    title: "Đánh Giá",
     icon: "analytics",
     bullets: [
-      "Run screening from the job workspace after candidates are imported.",
-      "Read match score, evidence score, pass or reject decision, and explanation summary.",
-      "Inspect rejected candidates separately to see missing evidence or verification problems.",
-      "Use the ranking output to identify the strongest shortlist for recruiter review.",
+      "Chạy screening sau khi đã import đủ ứng viên.",
+      "Xem match score, evidence score, quyết định pass/reject và phần giải thích.",
+      "Mở rejected candidates để biết thiếu evidence hay link không hợp lệ.",
+      "Dùng ranking để chọn shortlist tốt nhất cho recruiter review.",
     ],
   },
 ];
 
 const troubleshootingTips = [
   {
-    title: "API status shows Failed",
+    title: "API báo Failed",
     detail:
-      "The OpenRouter key is invalid or not accepted by the provider. Clear the key, paste a valid key, then save again until Connected appears.",
+      "Key OpenRouter chưa đúng hoặc nhà cung cấp từ chối. Mở Settings, thay key khác rồi Save lại cho tới khi hiện Connected.",
   },
   {
-    title: "JD or CV import fails",
+    title: "Import JD hoặc CV lỗi",
     detail:
-      "Use a readable PDF with selectable text. Scanned or image-only files may not parse reliably.",
+      "Hãy dùng PDF có text thật, không phải file scan ảnh. File chỉ có ảnh thường parse không ổn định.",
   },
   {
-    title: "Candidates do not appear in ranking",
+    title: "Ứng viên không vào ranking",
     detail:
-      "Check that they were imported into the correct job workspace and that screening has been executed for that job.",
+      "Kiểm tra ứng viên đã được import đúng job chưa và đã bấm Run Screening & Ranking chưa.",
   },
 ];
 
@@ -105,12 +105,12 @@ export default function GuidePage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="User Manual"
-        title="How To Use SkillGraph CV Matcher"
-        description="Follow this in-app guide to configure API access, import hiring data, evaluate candidates, and compare shortlist results without leaving the workspace."
+        eyebrow="Hướng Dẫn"
+        title="Cách sử dụng SkillGraph CV Matcher"
+        description="Trang này tóm tắt luồng dùng app: cấu hình API, nhập job, import CV, chạy screening và xem shortlist ngay trong workspace."
       />
 
-      <SectionShell title="Quick Start">
+      <SectionShell title="Bắt Đầu Nhanh">
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
           {quickStartSteps.map((item) => (
             <article
@@ -129,7 +129,7 @@ export default function GuidePage() {
         </div>
       </SectionShell>
 
-      <SectionShell title="Workflow Guide">
+      <SectionShell title="Luồng Sử Dụng">
         <div className="grid gap-5 xl:grid-cols-2">
           {workflowGroups.map((group) => (
             <article
@@ -160,7 +160,7 @@ export default function GuidePage() {
         </div>
       </SectionShell>
 
-      <SectionShell title="Troubleshooting">
+      <SectionShell title="Xử Lý Lỗi">
         <div className="grid gap-5 md:grid-cols-3">
           {troubleshootingTips.map((tip) => (
             <article

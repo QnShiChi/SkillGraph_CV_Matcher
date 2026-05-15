@@ -16,19 +16,19 @@ Initial scaffold for a Docker-based CV matching platform with:
 
 ## Setup
 
-1. Copy the environment file:
+1. Copy the environment template:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Start the stack:
+2. Start the application stack:
 
 ```bash
 make up
 ```
 
-3. Stop the stack:
+3. Stop the stack when you are done:
 
 ```bash
 make down
@@ -42,7 +42,7 @@ Run the latest schema migration:
 make migrate
 ```
 
-Apply this after the Docker stack is running and before testing CRUD endpoints for a fresh database.
+Run this after the Docker stack is up and before testing CRUD endpoints on a fresh database.
 
 ## PostgreSQL Backup and Restore
 
@@ -52,7 +52,7 @@ Create a versioned backup:
 make backup-db
 ```
 
-This writes a dump file to `backups/postgres/` using a timestamped filename.
+This creates a timestamped SQL dump in `backups/postgres/`.
 
 Restore a specific backup version:
 
@@ -64,7 +64,7 @@ Notes:
 
 - `make backup-db` and `make restore` expect the PostgreSQL container to be running
 - `make restore` restores into the current `POSTGRES_DB` configured in `.env`
-- choose the backup version by passing `BACKUP_FILE=...`
+- choose a backup file by passing `BACKUP_FILE=...`
 
 ## Local URLs
 
@@ -76,7 +76,7 @@ Notes:
 
 ## DBeaver PostgreSQL Connection
 
-Use these values:
+Use the following values:
 
 - Host: `localhost`
 - Port: `5432`
@@ -84,16 +84,18 @@ Use these values:
 - Username: value of `POSTGRES_USER` in `.env`
 - Password: value of `POSTGRES_PASSWORD` in `.env`
 
-DBeaver connects directly to the PostgreSQL container through the mapped host port.
+DBeaver connects directly to the PostgreSQL container through the exposed host port.
 
 ## Environment Notes
 
 - `NEXT_PUBLIC_API_BASE_URL` is the browser-facing backend URL
 - `INTERNAL_API_BASE_URL` is the Docker-internal backend URL used by the Next.js server runtime
+- if `NEXT_PUBLIC_API_BASE_URL` is unset, browser requests fall back to same-origin `/api/...` calls
+- `CORS_ALLOWED_ORIGINS` controls which browser origins may call the backend directly in cross-origin deployments
 
 ## OpenRouter Hybrid JD Parsing
 
-The JD import pipeline supports a hybrid parser that combines:
+The JD import pipeline supports a hybrid parser with the following stages:
 
 - `PyMuPDF` text extraction
 - text-layer extraction for text-selectable PDFs only
@@ -116,20 +118,20 @@ JD_PARSER_ENABLE_FALLBACK=true
 
 Notes:
 
-- `JD_PARSER_MODE=rule_based` keeps the previous local parser only
+- `JD_PARSER_MODE=rule_based` keeps the original local-only parser
 - `JD_PARSER_MODE=hybrid` uses OpenRouter first, then falls back to rule-based parsing if enabled
 - scanned or image-only PDFs are rejected early to keep imports fast and predictable
-- imported jobs expose `extract_source` as `text_layer`
-- imported jobs now include `parse_source` and `parse_confidence`
-- imported jobs now also include `graph_sync_status`, `graph_sync_error`, and `graph_synced_at`
-- the job workspace shows parser provenance so you can tell whether the output came from `llm_hybrid` or `rule_based_fallback`
-- future imports classify extracted signals into grouped categories such as `technical_skills`, `platforms_cloud`, `tooling_devops`, `competencies`, and `soft_skills`
+- imported jobs record `extract_source` as `text_layer`
+- imported jobs also store `parse_source` and `parse_confidence`
+- imported jobs additionally store `graph_sync_status`, `graph_sync_error`, and `graph_synced_at`
+- the job workspace shows parser provenance so you can see whether the result came from `llm_hybrid` or `rule_based_fallback`
+- extracted signals are grouped into categories such as `technical_skills`, `platforms_cloud`, `tooling_devops`, `competencies`, and `soft_skills`
 - after a successful import, graph-safe categories are projected automatically into Neo4j as `Job`, `Skill`, and `REQUIRES` relationships
-- core AI/ML taxonomy is covered for future imports, including prerequisite enrichment for skills such as `machine_learning`, `deep_learning`, `transformer`, `bert`, `ocr`, and `mlops`
+- the AI/ML taxonomy already supports prerequisite enrichment for skills such as `machine_learning`, `deep_learning`, `transformer`, `bert`, `ocr`, and `mlops`
 
 ## OpenRouter Hybrid CV Parsing
 
-The CV import pipeline now supports a hybrid parser that combines:
+The CV import pipeline supports a hybrid parser with the following stages:
 
 - `PyMuPDF` text extraction
 - text-layer extraction for text-selectable PDFs only
@@ -152,11 +154,11 @@ CV_PARSER_ENABLE_FALLBACK=true
 
 Notes:
 
-- `CV_PARSER_MODE=rule_based` keeps the previous local parser only
+- `CV_PARSER_MODE=rule_based` keeps the original local-only parser
 - `CV_PARSER_MODE=hybrid` uses OpenRouter first, then falls back to `rule_based_fallback` if enabled
 - scanned or image-only CV PDFs are rejected early to keep batch imports fast and predictable
-- imported candidates and batch results expose `extract_source` as `text_layer`
-- imported candidates keep `parse_source`, `parse_confidence`, `graph_sync_status`, `graph_sync_error`, and `graph_synced_at`
+- imported candidates and batch results record `extract_source` as `text_layer`
+- imported candidates store `parse_source`, `parse_confidence`, `graph_sync_status`, `graph_sync_error`, and `graph_synced_at`
 - candidate parsing remains evidence-aware, so each extracted skill keeps supporting snippets when available
 - candidate graph projection continues to reuse the same canonical skill taxonomy as JD imports
 
@@ -174,7 +176,7 @@ Notes:
 3. Open `http://localhost:3000/admin/jobs`
 4. Use `Import JD PDF` to upload a text-based JD PDF with selectable text
 5. Open the generated job with `Open Workspace`
-6. Check `Graph synced` status in the admin card or workspace metadata
+6. Check the `Graph synced` status in the admin card or workspace metadata
 7. Inspect Neo4j Browser at `http://localhost:7474` if you want to verify graph projection
 
 ## CV Import Workflow
@@ -184,7 +186,7 @@ Notes:
 3. Open `http://localhost:3000/admin/jobs`
 4. Choose a job and open its workspace at `/jobs/[jobId]`
 5. Use `Import CV PDF` to upload one or more CV PDFs in a batch
-6. Review the batch result summary for:
+6. Review the batch summary for:
    - total files
    - success count
    - failed count
@@ -201,11 +203,11 @@ Notes:
 Current limitations:
 
 - only text-selectable PDFs are supported for CV and JD import
-- scanned or image-only PDFs are rejected instead of running OCR to keep import latency low
-- production build verification should be run in an isolated container or image, not inside the mounted dev container sharing `.next`
+- scanned or image-only PDFs are rejected instead of using OCR, which keeps import latency low
+- production build verification should run in an isolated container or image, not inside the mounted development container that shares `.next`
 - candidates are currently owned by one job workspace and are not reused across multiple jobs
 - screening and ranking currently run through a deterministic-first workflow
-- AgentScope is wired as an optional seam for future Verifier/Matcher/Explainer/Critic orchestration, but the live demo path still uses deterministic verification and scoring for speed
+- AgentScope is wired in as an optional seam for future Verifier/Matcher/Explainer/Critic orchestration, but the current demo path still uses deterministic verification and scoring for speed
 
 ## Screening And Ranking Workflow
 
@@ -213,9 +215,9 @@ Current limitations:
 2. Import one or more text-selectable CV PDFs
 3. Click `Run Screening & Ranking`
 4. The backend applies the demo policy:
-   - missing project/GitHub/portfolio link => reject
+   - missing project, GitHub, or portfolio link => reject
    - unreachable project link => reject
-   - reachable project evidence => pass to ranking
+   - reachable project evidence => continue to ranking
 5. Verified candidates are ranked by:
    - must-have coverage
    - verified project evidence

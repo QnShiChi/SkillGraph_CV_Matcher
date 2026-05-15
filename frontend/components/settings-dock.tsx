@@ -14,6 +14,8 @@ export function SettingsDock() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
+  const [hasSavedApiKey, setHasSavedApiKey] = useState(false);
+  const [activeSource, setActiveSource] = useState<"env" | "database" | "unset">("unset");
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "failed" | "unset"
   >("unset");
@@ -32,6 +34,8 @@ export function SettingsDock() {
         ]);
         if (isMounted) {
           setHasApiKey(apiKeyStatus.has_openrouter_api_key);
+          setHasSavedApiKey(apiKeyStatus.has_saved_openrouter_api_key);
+          setActiveSource(apiKeyStatus.active_source);
           setConnectionStatus(connectionStatusResult.connection_status);
           setErrorMessage(
             connectionStatusResult.detail && connectionStatusResult.connection_status === "failed"
@@ -70,22 +74,48 @@ export function SettingsDock() {
     try {
       const validation = await validateOpenRouterApiKey(apiKey);
       if (validation.connection_status !== "connected") {
-        setConnectionStatus(validation.connection_status);
-        setHasApiKey(false);
+        const [apiKeyStatus, connectionStatusResult] = await Promise.all([
+          getOpenRouterApiKeyStatus(),
+          getOpenRouterConnectionStatus(),
+        ]);
+        setHasApiKey(apiKeyStatus.has_openrouter_api_key);
+        setHasSavedApiKey(apiKeyStatus.has_saved_openrouter_api_key);
+        setActiveSource(apiKeyStatus.active_source);
+        setConnectionStatus(connectionStatusResult.connection_status);
         setErrorMessage(validation.detail ?? "Failed to validate API key.");
         return;
       }
 
       await saveOpenRouterApiKey(apiKey);
-      setConnectionStatus("connected");
-      setHasApiKey(true);
-      setErrorMessage("Connected to OpenRouter.");
+      const [apiKeyStatus, connectionStatusResult] = await Promise.all([
+        getOpenRouterApiKeyStatus(),
+        getOpenRouterConnectionStatus(),
+      ]);
+      setHasApiKey(apiKeyStatus.has_openrouter_api_key);
+      setHasSavedApiKey(apiKeyStatus.has_saved_openrouter_api_key);
+      setActiveSource(apiKeyStatus.active_source);
+      setConnectionStatus(connectionStatusResult.connection_status);
+      setErrorMessage(
+        connectionStatusResult.connection_status === "connected"
+          ? "Connected to OpenRouter."
+          : connectionStatusResult.detail ?? "Failed to connect to OpenRouter.",
+      );
       if (inputRef.current) {
         inputRef.current.value = "";
       }
     } catch (error) {
-      setConnectionStatus("failed");
-      setHasApiKey(false);
+      try {
+        const [apiKeyStatus, connectionStatusResult] = await Promise.all([
+          getOpenRouterApiKeyStatus(),
+          getOpenRouterConnectionStatus(),
+        ]);
+        setHasApiKey(apiKeyStatus.has_openrouter_api_key);
+        setHasSavedApiKey(apiKeyStatus.has_saved_openrouter_api_key);
+        setActiveSource(apiKeyStatus.active_source);
+        setConnectionStatus(connectionStatusResult.connection_status);
+      } catch {
+        setConnectionStatus("failed");
+      }
       setErrorMessage(error instanceof Error ? error.message : "Failed to save API key.");
     } finally {
       setIsSaving(false);
@@ -97,10 +127,17 @@ export function SettingsDock() {
     setErrorMessage(null);
 
     try {
-      await clearOpenRouterApiKey();
-      setConnectionStatus("unset");
-      setHasApiKey(false);
-      setErrorMessage(null);
+      const apiKeyStatus = await clearOpenRouterApiKey();
+      const connectionStatusResult = await getOpenRouterConnectionStatus();
+      setHasApiKey(apiKeyStatus.has_openrouter_api_key);
+      setHasSavedApiKey(apiKeyStatus.has_saved_openrouter_api_key);
+      setActiveSource(apiKeyStatus.active_source);
+      setConnectionStatus(connectionStatusResult.connection_status);
+      setErrorMessage(
+        connectionStatusResult.connection_status === "failed"
+          ? connectionStatusResult.detail ?? "Failed to connect to OpenRouter."
+          : null,
+      );
       if (inputRef.current) {
         inputRef.current.value = "";
       }
@@ -140,13 +177,23 @@ export function SettingsDock() {
             ref={inputRef}
             aria-label="OpenRouter API key"
             className="w-full rounded-[16px] border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-muted)] focus:border-[rgba(75,65,225,0.45)] focus:ring-2 focus:ring-[rgba(75,65,225,0.12)]"
-            placeholder={isLoading || hasApiKey ? "Key saved in database" : "Paste your key here"}
+            placeholder={
+              activeSource === "env"
+                ? "Active key is provided by the server environment"
+                : isLoading || hasSavedApiKey
+                  ? "Fallback key saved in database"
+                  : "Paste your key here"
+            }
             type="password"
           />
         </label>
 
         <p className="mt-2 text-xs font-medium text-[var(--color-muted)]">
-          {hasApiKey ? "A key is already saved in the database." : "No API key is saved yet."}
+          {activeSource === "env"
+            ? "The active key is coming from the server environment."
+            : hasSavedApiKey
+              ? "A fallback key is saved in the database."
+              : "No fallback API key is saved in the database."}
         </p>
 
         <div className="mt-3 flex items-center gap-2 text-xs font-semibold">
@@ -236,7 +283,7 @@ export function SettingsDock() {
           </span>
         ) : hasApiKey ? (
           <span className="rounded-full bg-[rgba(22,163,74,0.10)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-success-text)]">
-            Saved
+            {activeSource === "env" ? "Env" : "Saved"}
           </span>
         ) : (
           <span className="rounded-full bg-[rgba(148,151,169,0.12)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">

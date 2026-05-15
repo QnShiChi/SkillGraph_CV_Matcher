@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import Literal
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,10 @@ class Settings(BaseSettings):
     neo4j_uri: str
     neo4j_username: str
     neo4j_password: str
+    cors_allowed_origins_raw: str = Field(
+        default="http://localhost:3000",
+        validation_alias="CORS_ALLOWED_ORIGINS",
+    )
     openrouter_api_key: str | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_model: str = "openai/gpt-5.4-mini"
@@ -35,6 +40,11 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        origins = [origin.strip() for origin in self.cors_allowed_origins_raw.split(",") if origin.strip()]
+        return origins or ["http://localhost:3000"]
 
     @property
     def postgres_dsn(self) -> str:

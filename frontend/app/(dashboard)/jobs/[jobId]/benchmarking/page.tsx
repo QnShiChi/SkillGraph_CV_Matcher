@@ -5,10 +5,16 @@ import { getJob, getJobCandidates } from "@/lib/api";
 
 export default async function JobBenchmarkingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ jobId: string }>;
+  searchParams?: Promise<{
+    leftCandidateId?: string | string[];
+    rightCandidateId?: string | string[];
+  }>;
 }) {
   const { jobId } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const numericJobId = Number(jobId);
   const job = await getJob(numericJobId);
 
@@ -17,6 +23,21 @@ export default async function JobBenchmarkingPage({
   }
 
   const candidates = await getJobCandidates(numericJobId);
+  const leftCandidateId =
+    typeof resolvedSearchParams?.leftCandidateId === "string"
+      ? resolvedSearchParams.leftCandidateId
+      : undefined;
+  const rightCandidateId =
+    typeof resolvedSearchParams?.rightCandidateId === "string"
+      ? resolvedSearchParams.rightCandidateId
+      : undefined;
 
-  return <JobBenchmarkingView job={job} candidates={candidates} />;
+  return (
+    <JobBenchmarkingView
+      job={job}
+      candidates={candidates}
+      leftCandidateId={leftCandidateId}
+      rightCandidateId={rightCandidateId}
+    />
+  );
 }

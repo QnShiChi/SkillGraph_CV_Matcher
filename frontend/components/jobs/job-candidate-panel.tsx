@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -13,6 +14,11 @@ import {
   getJobRanking,
   screenAndRankJobCandidates,
 } from "@/lib/api";
+import {
+  buildComparisonHref,
+  listSecondaryComparisonCandidates,
+  resolveComparisonSelectionAction,
+} from "@/lib/benchmarking-selection";
 import { formatScreenAndRankErrorMessage } from "@/lib/ranking-error-message";
 
 function normalizeCandidates(value: Candidate[] | null | undefined): Candidate[] {
@@ -121,6 +127,7 @@ export function JobCandidatePanel({
   jobId: number;
   initialCandidates: Candidate[];
 }) {
+  const router = useRouter();
   const [candidates, setCandidates] = useState<Candidate[]>(
     normalizeCandidates(initialCandidates),
   );
@@ -129,6 +136,7 @@ export function JobCandidatePanel({
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Candidate | null>(null);
+  const [selectedComparisonIds, setSelectedComparisonIds] = useState<number[]>([]);
 
   const sortedCandidates = useMemo(
     () => sortForRanking(normalizeCandidates(candidates)),
@@ -163,9 +171,40 @@ export function JobCandidatePanel({
     [sortedCandidates],
   );
 
+  const selectedComparisonCandidates = useMemo(
+    () =>
+      selectedComparisonIds
+        .map((candidateId) =>
+          rankedCandidates.find((candidate) => candidate.id === candidateId),
+        )
+        .filter((candidate): candidate is Candidate => Boolean(candidate)),
+    [rankedCandidates, selectedComparisonIds],
+  );
+
+  const secondaryComparisonOptions = useMemo(
+    () => listSecondaryComparisonCandidates(rankedCandidates, selectedComparisonIds),
+    [rankedCandidates, selectedComparisonIds],
+  );
+
+  const compareGraphHref = useMemo(() => {
+    if (selectedComparisonIds.length !== 2) {
+      return `/jobs/${jobId}/benchmarking`;
+    }
+
+    return buildComparisonHref(jobId, selectedComparisonIds[0], selectedComparisonIds[1]);
+  }, [jobId, selectedComparisonIds]);
+
   useEffect(() => {
     setCandidates(normalizeCandidates(initialCandidates));
   }, [initialCandidates]);
+
+  useEffect(() => {
+    setSelectedComparisonIds((current) =>
+      current.filter((candidateId) =>
+        rankedCandidates.some((candidate) => candidate.id === candidateId),
+      ),
+    );
+  }, [rankedCandidates]);
 
   async function refreshCandidates() {
     const nextCandidates = await getJobCandidates(jobId);
@@ -249,6 +288,20 @@ export function JobCandidatePanel({
       );
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  function selectComparisonCandidate(candidateId: number) {
+    const action = resolveComparisonSelectionAction(
+      jobId,
+      selectedComparisonIds,
+      candidateId,
+    );
+
+    setSelectedComparisonIds(action.selectedIds);
+
+    if (action.href) {
+      router.push(action.href);
     }
   }
 
@@ -353,11 +406,25 @@ export function JobCandidatePanel({
             <p className="mt-2 text-sm text-[var(--color-muted)]">
               Ranking board for candidates that passed evidence verification and screening.
             </p>
+            <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
+              Select exactly two ranked candidates to compare their graphs.
+            </p>
           </div>
           <div className="flex items-center gap-2">
+            {selectedComparisonCandidates.length === 2 ? (
+              <div className="text-right text-xs text-[var(--color-muted)]">
+                <p>{selectedComparisonCandidates[0].full_name}</p>
+                <p>{selectedComparisonCandidates[1].full_name}</p>
+              </div>
+            ) : null}
             <Link
-              href={`/jobs/${jobId}/benchmarking`}
-              className="rounded-full border border-white/70 bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-[rgba(75,65,225,0.05)]"
+              aria-disabled={selectedComparisonIds.length !== 2}
+              href={compareGraphHref}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                selectedComparisonIds.length === 2
+                  ? "border-white/70 bg-white text-[var(--color-text)] hover:bg-[rgba(75,65,225,0.05)]"
+                  : "pointer-events-none border-[rgba(134,155,189,0.2)] bg-[rgba(148,151,169,0.12)] text-[var(--color-muted)]"
+              }`}
             >
               Compare Graph
             </Link>
@@ -395,6 +462,10 @@ export function JobCandidatePanel({
                   const score = toPercent(candidate.match_score);
                   const gaps = deriveSkillGaps(candidate);
                   const skills = derivePrimarySkills(candidate);
+                  const isSelectedForComparison = selectedComparisonIds.includes(candidate.id);
+                  const isAwaitingSecondSelection =
+                    selectedComparisonIds.length === 1 &&
+                    selectedComparisonIds[0] === candidate.id;
 
                   return (
                     <tr
@@ -454,25 +525,56 @@ export function JobCandidatePanel({
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex flex-wrap gap-2">
-                          <Link
-                            href={`/jobs/${jobId}/benchmarking`}
-                            className="rounded-[14px] border border-[rgba(75,65,225,0.4)] px-4 py-2 text-sm font-semibold text-[var(--color-brand)] transition hover:bg-[rgba(75,65,225,0.05)]"
-                          >
-                            Compare Graph
-                          </Link>
-                          <Link
-                            href={`/candidates/${candidate.id}`}
-                            className="rounded-[14px] border border-white/70 bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[rgba(75,65,225,0.05)]"
-                          >
-                            Open Profile
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteTarget(candidate)}
-                            className="rounded-[14px] bg-[var(--color-brand-deep)] px-4 py-2 text-sm font-medium text-white"
-                          >
-                            Delete
-                          </button>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => selectComparisonCandidate(candidate.id)}
+                              className={`rounded-[14px] px-4 py-2 text-sm font-semibold transition ${
+                                isSelectedForComparison
+                                  ? "bg-[rgba(75,65,225,0.10)] text-[var(--color-brand)]"
+                                  : "border border-[rgba(75,65,225,0.4)] text-[var(--color-brand)] hover:bg-[rgba(75,65,225,0.05)]"
+                              }`}
+                            >
+                              {isAwaitingSecondSelection
+                                ? "First Selected"
+                                : isSelectedForComparison
+                                  ? "Selected"
+                                  : "Select To Compare"}
+                            </button>
+                            {isAwaitingSecondSelection ? (
+                              <div className="absolute left-0 top-full z-20 mt-2 w-[260px] overflow-hidden rounded-[18px] border border-[rgba(75,65,225,0.16)] bg-white shadow-[0_18px_40px_rgba(10,20,40,0.14)]">
+                                <div className="max-h-64 overflow-y-auto">
+                                  {secondaryComparisonOptions.map((option, optionIndex) => (
+                                    <button
+                                      key={`compare-option-${candidate.id}-${option.id}`}
+                                      type="button"
+                                      onClick={() => selectComparisonCandidate(option.id)}
+                                      className={`block w-full px-4 py-3 text-left text-sm font-medium text-[var(--color-text)] transition hover:bg-[rgba(75,65,225,0.05)] ${
+                                        optionIndex > 0
+                                          ? "border-t border-[rgba(134,155,189,0.14)]"
+                                          : ""
+                                      }`}
+                                    >
+                                      {option.full_name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                            <Link
+                              href={`/candidates/${candidate.id}`}
+                              className="rounded-[14px] border border-white/70 bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[rgba(75,65,225,0.05)]"
+                            >
+                              Open Profile
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(candidate)}
+                              className="rounded-[14px] bg-[var(--color-brand-deep)] px-4 py-2 text-sm font-medium text-white"
+                            >
+                              Delete
+                            </button>
                         </div>
                       </td>
                     </tr>

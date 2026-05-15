@@ -1,34 +1,11 @@
 import Link from "next/link";
 
 import type { Candidate, Job } from "@/lib/api";
+import { resolveComparisonCandidates } from "@/lib/benchmarking-selection";
+import { toHundredPointScore } from "@/lib/score-formatting";
 
 import { PageHeader } from "@/components/page-header";
 import { StateCard } from "@/components/state-card";
-
-function scoreToPercent(value: number | null, multiplier = 100) {
-  if (value == null) {
-    return 0;
-  }
-
-  return Math.max(0, Math.min(100, Math.round(value * multiplier)));
-}
-
-function pickTopCandidates(candidates: Candidate[]) {
-  return [...candidates]
-    .sort((left, right) => {
-      const leftScore = left.match_score ?? -1;
-      const rightScore = right.match_score ?? -1;
-
-      if (rightScore !== leftScore) {
-        return rightScore - leftScore;
-      }
-
-      return (
-        new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime()
-      );
-    })
-    .slice(0, 2);
-}
 
 function readSkillGroups(candidate: Candidate) {
   if (!candidate.structured_cv_json || typeof candidate.structured_cv_json !== "object") {
@@ -73,8 +50,8 @@ function CandidateComparisonCard({
   accent: string;
 }) {
   const skills = unique(readSkillGroups(candidate)).slice(0, 8);
-  const match = scoreToPercent(candidate.match_score);
-  const verification = scoreToPercent(candidate.verification_score, 1);
+  const match = toHundredPointScore(candidate.match_score);
+  const verification = toHundredPointScore(candidate.verification_score);
 
   return (
     <article className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_20px_60px_rgba(10,20,40,0.07)] backdrop-blur-xl">
@@ -159,11 +136,19 @@ function CandidateComparisonCard({
 export function JobBenchmarkingView({
   job,
   candidates,
+  leftCandidateId,
+  rightCandidateId,
 }: {
   job: Job;
   candidates: Candidate[];
+  leftCandidateId?: string;
+  rightCandidateId?: string;
 }) {
-  const topCandidates = pickTopCandidates(candidates);
+  const topCandidates = resolveComparisonCandidates(
+    candidates,
+    leftCandidateId,
+    rightCandidateId,
+  );
   const [left, right] = topCandidates;
   const leftSkills = left ? unique(readSkillGroups(left)) : [];
   const rightSkills = right ? unique(readSkillGroups(right)) : [];
@@ -200,7 +185,11 @@ export function JobBenchmarkingView({
       <PageHeader
         eyebrow={`Benchmarking / ${job.title}`}
         title={`Candidate Benchmarking: ${left.full_name} vs. ${right.full_name}`}
-        description="Side-by-side recruiter comparison built from the highest-ranked candidates in this job workspace."
+        description={
+          leftCandidateId && rightCandidateId
+            ? "Side-by-side recruiter comparison for the candidates you selected in the job workspace."
+            : "Side-by-side recruiter comparison built from the highest-ranked candidates in this job workspace."
+        }
         action={
           <div className="flex flex-wrap gap-3">
             <Link
@@ -280,7 +269,9 @@ export function JobBenchmarkingView({
             <p>
               Match delta:{" "}
               <span className="font-semibold text-[var(--color-text)]">
-                {Math.abs(scoreToPercent(left.match_score) - scoreToPercent(right.match_score))} points
+                {Math.abs(
+                  toHundredPointScore(left.match_score) - toHundredPointScore(right.match_score),
+                )} points
               </span>
             </p>
             <p>{left.match_summary ?? "No shortlist explanation generated for the current top profile."}</p>

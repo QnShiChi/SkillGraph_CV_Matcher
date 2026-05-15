@@ -2,6 +2,8 @@ import { publicEnv } from "@/lib/env";
 
 export type OpenRouterApiKeyStatus = {
   has_openrouter_api_key: boolean;
+  has_saved_openrouter_api_key: boolean;
+  active_source: "env" | "database" | "unset";
 };
 
 export type OpenRouterConnectionStatus = {

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class OpenRouterApiKeyUpdate(BaseModel):
@@ -7,6 +8,8 @@ class OpenRouterApiKeyUpdate(BaseModel):
 
 class OpenRouterApiKeyStatus(BaseModel):
     has_openrouter_api_key: bool
+    has_saved_openrouter_api_key: bool
+    active_source: Literal["env", "database", "unset"]
 
 
 class OpenRouterApiKeyValidationRequest(BaseModel):

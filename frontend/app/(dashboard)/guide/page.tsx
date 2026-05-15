@@ -4,100 +4,105 @@ import { SectionShell } from "@/components/section-shell";
 const quickStartSteps = [
   {
     step: "1",
-    title: "Mở Settings",
+    title: "Open Settings",
     detail:
-      "Bấm nút Settings ở góc trái dưới để kiểm tra trạng thái API key trước khi dùng các chức năng cần OpenRouter.",
+      "Open the Settings dock in the lower-left corner to check whether OpenRouter is already connected before importing or screening.",
   },
   {
     step: "2",
-    title: "Kết nối OpenRouter",
+    title: "Connect OpenRouter",
     detail:
-      "Dán OpenRouter API key, bấm Save, rồi chờ trạng thái Connected. Nếu key đã lưu trong DB thì app sẽ tự kết nối khi khởi động.",
+      "Paste an API key and click Save. The app validates the key first, then shows Connected when the active key is ready to use.",
   },
   {
     step: "3",
-    title: "Tạo hoặc nhập Job",
+    title: "Create or Import a Job",
     detail:
-      "Dùng Import JD để nhập JD từ PDF hoặc tạo job thủ công từ nhu cầu tuyển dụng.",
+      "Use Import JD to upload a JD PDF, or create a job manually inside Jobs when you already have the hiring requirements.",
   },
   {
     step: "4",
-    title: "Import CV ứng viên",
+    title: "Import Candidate CVs",
     detail:
-      "Mở job cần xử lý, sau đó import CV PDF vào đúng workspace để hệ thống gắn ứng viên vào job đó.",
+      "Open the target job workspace and import CV PDFs there so each candidate is attached to the correct job from the start.",
   },
   {
     step: "5",
-    title: "Chạy screening và ranking",
+    title: "Run Screening and Ranking",
     detail:
-      "Trong job workspace, bấm Run Screening & Ranking để chấm điểm, kiểm tra evidence và tạo danh sách xếp hạng.",
+      "Inside the workspace, click Run Screening & Ranking to verify project links, assign pass or reject decisions, and build the ranked shortlist.",
   },
   {
     step: "6",
-    title: "So sánh ứng viên",
+    title: "Compare Candidates",
     detail:
-      "Mở benchmarking để xem song song điểm mạnh, điểm yếu, điểm số và bằng chứng hỗ trợ của các ứng viên nổi bật.",
+      "Select one ranked candidate, choose the second name from the inline compare list, and the app opens benchmarking automatically.",
   },
 ];
 
 const workflowGroups = [
   {
-    title: "Cấu Hình API",
+    title: "API and Key Source",
     icon: "vpn_key",
     bullets: [
-      "Mở Settings ở góc trái dưới màn hình.",
-      "Dán OpenRouter API key vào ô nhập.",
-      "Bấm Save và kiểm tra badge chuyển sang Connected.",
-      "Nếu badge báo Failed, hãy sửa lại key hoặc reconnect từ cùng khung Settings.",
+      "Open Settings in the lower-left corner of the screen.",
+      "If the server already provides an OpenRouter key, the dock shows that the active source is the server environment.",
+      "If you save a key manually, the app validates it before storing it and switching the active connection.",
+      "Use Clear when you want to remove the saved fallback key and reset the current user-managed override.",
     ],
   },
   {
-    title: "Nhập Job",
+    title: "Job Intake",
     icon: "upload_file",
     bullets: [
-      "Bấm Import JD ở thanh bên trái.",
-      "Upload file JD PDF hoặc tạo job bằng form thủ công.",
-      "Chờ hệ thống parse nội dung và tạo bản ghi job.",
-      "Vào Jobs để kiểm tra tiêu đề, dữ liệu đã parse và trạng thái graph sync.",
+      "Click Import JD in the left sidebar.",
+      "Upload a JD PDF or create the job manually from the Jobs area.",
+      "Wait for the parser to create the job record and structured job content.",
+      "Open the workspace to review the title, parsed sections, and graph sync status.",
     ],
   },
   {
-    title: "Nhập Ứng Viên",
+    title: "Candidate Intake",
     icon: "person_add",
     bullets: [
-      "Mở đúng job workspace trước khi import CV.",
-      "Upload CV PDF để mỗi hồ sơ được gắn với đúng job.",
-      "Kiểm tra skills trích xuất, parse status và graph sync sau khi import.",
-      "Dùng bulk import khi cần xử lý nhiều CV cho cùng một vị trí.",
+      "Open the correct job workspace before importing CVs.",
+      "Upload one or more CV PDFs so each candidate profile stays attached to the active job.",
+      "New imports appear in the Newly Imported section before they are screened.",
+      "Review extracted skills, parse source, and graph sync after each import.",
     ],
   },
   {
-    title: "Đánh Giá",
+    title: "Screening, Ranking, and Compare",
     icon: "analytics",
     bullets: [
-      "Chạy screening sau khi đã import đủ ứng viên.",
-      "Xem match score, evidence score, quyết định pass/reject và phần giải thích.",
-      "Mở rejected candidates để biết thiếu evidence hay link không hợp lệ.",
-      "Dùng ranking để chọn shortlist tốt nhất cho recruiter review.",
+      "Run screening only after the target candidate set for that job has been imported.",
+      "Candidates move into Ranked Candidates only if their evidence passes the verification rules.",
+      "Evidence score reflects project-link verification strength, while match score reflects job fit.",
+      "To compare two ranked candidates, choose the first candidate and then click the second candidate name in the inline list. Benchmarking opens immediately.",
     ],
   },
 ];
 
 const troubleshootingTips = [
   {
-    title: "API báo Failed",
+    title: "OpenRouter shows Failed",
     detail:
-      "Key OpenRouter chưa đúng hoặc nhà cung cấp từ chối. Mở Settings, thay key khác rồi Save lại cho tới khi hiện Connected.",
+      "The key is invalid, expired, or rejected by OpenRouter. Open Settings, replace the key, save again, and wait for the status to return to Connected.",
   },
   {
-    title: "Import JD hoặc CV lỗi",
+    title: "JD or CV import fails",
     detail:
-      "Hãy dùng PDF có text thật, không phải file scan ảnh. File chỉ có ảnh thường parse không ổn định.",
+      "Use PDFs with real selectable text whenever possible. Image-only or low-quality scanned PDFs can still import, but extracted content is less reliable.",
   },
   {
-    title: "Ứng viên không vào ranking",
+    title: "Candidate does not appear in ranking",
     detail:
-      "Kiểm tra ứng viên đã được import đúng job chưa và đã bấm Run Screening & Ranking chưa.",
+      "Check whether the CV was imported into the correct job, then run Screening & Ranking. Candidates with failed evidence checks stay in the rejected section instead of the ranked board.",
+  },
+  {
+    title: "Evidence score looks too high",
+    detail:
+      "Evidence score is based on reachable project links and whether the fetched content supports the CV claims. It is a link-verification signal, not a full technical interview score.",
   },
 ];
 
@@ -105,12 +110,12 @@ export default function GuidePage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Hướng Dẫn"
-        title="Cách sử dụng SkillGraph CV Matcher"
-        description="Trang này tóm tắt luồng dùng app: cấu hình API, nhập job, import CV, chạy screening và xem shortlist ngay trong workspace."
+        eyebrow="Guide"
+        title="How to Use SkillGraph CV Matcher"
+        description="This page summarizes the live workflow of the current app: connect OpenRouter, import jobs and CVs, run evidence-based screening, rank candidates, and open benchmarking from the workspace."
       />
 
-      <SectionShell title="Bắt Đầu Nhanh">
+      <SectionShell title="Quick Start">
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
           {quickStartSteps.map((item) => (
             <article
@@ -129,7 +134,7 @@ export default function GuidePage() {
         </div>
       </SectionShell>
 
-      <SectionShell title="Luồng Sử Dụng">
+      <SectionShell title="Workflow">
         <div className="grid gap-5 xl:grid-cols-2">
           {workflowGroups.map((group) => (
             <article
@@ -160,7 +165,7 @@ export default function GuidePage() {
         </div>
       </SectionShell>
 
-      <SectionShell title="Xử Lý Lỗi">
+      <SectionShell title="Troubleshooting">
         <div className="grid gap-5 md:grid-cols-3">
           {troubleshootingTips.map((tip) => (
             <article

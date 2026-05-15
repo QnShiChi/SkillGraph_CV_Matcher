@@ -2,6 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
+from app.api.runtime_settings import (
+    OPENROUTER_API_KEY_MODE_DATABASE_OVERRIDE,
+    OPENROUTER_API_KEY_MODE_SETTING,
+    resolve_openrouter_api_key,
+)
 from app.repositories.app_setting_repository import (
     OPENROUTER_API_KEY_SETTING,
     delete_setting,
@@ -22,8 +27,12 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 @router.get("/openrouter-api-key", response_model=OpenRouterApiKeyStatus)
 def get_openrouter_api_key(session: Session = Depends(get_db_session)) -> OpenRouterApiKeyStatus:
+    active_api_key, active_source = resolve_openrouter_api_key(session)
+    has_saved_openrouter_api_key = bool(get_setting_value(session, OPENROUTER_API_KEY_SETTING))
     return OpenRouterApiKeyStatus(
-        has_openrouter_api_key=bool(get_setting_value(session, OPENROUTER_API_KEY_SETTING))
+        has_openrouter_api_key=bool(active_api_key),
+        has_saved_openrouter_api_key=has_saved_openrouter_api_key,
+        active_source=active_source,
     )
 
 
@@ -40,7 +49,12 @@ def put_openrouter_api_key(
         )
 
     upsert_setting(session, OPENROUTER_API_KEY_SETTING, api_key)
-    return OpenRouterApiKeyStatus(has_openrouter_api_key=True)
+    upsert_setting(
+        session,
+        OPENROUTER_API_KEY_MODE_SETTING,
+        OPENROUTER_API_KEY_MODE_DATABASE_OVERRIDE,
+    )
+    return get_openrouter_api_key(session)
 
 
 @router.delete("/openrouter-api-key", response_model=OpenRouterApiKeyStatus)
@@ -48,14 +62,19 @@ def delete_openrouter_api_key(
     session: Session = Depends(get_db_session),
 ) -> OpenRouterApiKeyStatus:
     delete_setting(session, OPENROUTER_API_KEY_SETTING)
-    return OpenRouterApiKeyStatus(has_openrouter_api_key=False)
+    upsert_setting(
+        session,
+        OPENROUTER_API_KEY_MODE_SETTING,
+        OPENROUTER_API_KEY_MODE_DATABASE_OVERRIDE,
+    )
+    return get_openrouter_api_key(session)
 
 
 @router.get("/openrouter-api-key/status", response_model=OpenRouterConnectionStatus)
 def get_openrouter_api_key_status(
     session: Session = Depends(get_db_session),
 ) -> OpenRouterConnectionStatus:
-    api_key = get_setting_value(session, OPENROUTER_API_KEY_SETTING)
+    api_key, _ = resolve_openrouter_api_key(session)
     return _check_openrouter_connection(api_key)
 
 

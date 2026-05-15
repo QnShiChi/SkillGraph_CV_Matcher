@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.api.runtime_settings import get_runtime_settings
+from app.core.config import Settings
 from app.db.session import get_db_session
 from app.repositories.job_repository import (
     create_job,
@@ -43,6 +45,7 @@ def post_job(payload: JobCreate, session: Session = Depends(get_db_session)) -> 
 def import_job(
     file: UploadFile = File(...),
     session: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_runtime_settings),
 ) -> JobRead:
     if file.content_type != "application/pdf":
         raise HTTPException(
@@ -51,7 +54,7 @@ def import_job(
         )
 
     try:
-        return import_job_pdf(session, file)
+        return import_job_pdf(session, file, settings=settings)
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -108,7 +111,11 @@ def get_job_graph(job_id: int, session: Session = Depends(get_db_session)) -> Jo
 
 
 @router.post("/{job_id}/screen-and-rank", response_model=CandidateRankingResponse)
-def screen_and_rank_job(job_id: int, session: Session = Depends(get_db_session)) -> CandidateRankingResponse:
+def screen_and_rank_job(
+    job_id: int,
+    session: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_runtime_settings),
+) -> CandidateRankingResponse:
     job = get_job_by_id(session, job_id)
     if job is None:
         raise HTTPException(
@@ -117,7 +124,7 @@ def screen_and_rank_job(job_id: int, session: Session = Depends(get_db_session))
         )
 
     try:
-        result = screen_and_rank_job_candidates(session, job_id=job_id)
+        result = screen_and_rank_job_candidates(session, job_id=job_id, settings=settings)
     except AgentScopeUnavailableError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -132,6 +139,7 @@ def import_job_candidate(
     job_id: int,
     file: UploadFile = File(...),
     session: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_runtime_settings),
 ) -> CandidateRead:
     job = get_job_by_id(session, job_id)
     if job is None:
@@ -147,7 +155,7 @@ def import_job_candidate(
         )
 
     try:
-        return import_candidate_pdf(session, file, job_id=job_id)
+        return import_candidate_pdf(session, file, job_id=job_id, settings=settings)
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -164,6 +172,7 @@ def import_job_candidates_bulk(
     job_id: int,
     files: list[UploadFile] = File(...),
     session: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_runtime_settings),
 ) -> CandidateBulkImportResponse:
     job = get_job_by_id(session, job_id)
     if job is None:
@@ -178,7 +187,7 @@ def import_job_candidates_bulk(
             detail="At least one PDF file is required.",
         )
 
-    result = import_candidates_bulk(session, files, job_id=job_id)
+    result = import_candidates_bulk(session, files, job_id=job_id, settings=settings)
     return CandidateBulkImportResponse(**result)
 
 

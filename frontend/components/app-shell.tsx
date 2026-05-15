@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { SidebarNav } from "@/components/sidebar-nav";
+import { SettingsDock } from "@/components/settings-dock";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -27,12 +28,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 <span className="material-symbols-outlined text-[20px]">notifications</span>
               </button>
-              <button
-                type="button"
-                className="grid h-10 w-10 place-items-center rounded-full border border-white/70 bg-white/80 text-[var(--color-muted)] shadow-[0_10px_30px_rgba(10,20,40,0.05)] transition hover:text-[var(--color-brand)]"
-              >
-                <span className="material-symbols-outlined text-[20px]">settings</span>
-              </button>
               <div className="hidden items-center gap-3 rounded-full border border-white/70 bg-white/80 px-3 py-2 shadow-[0_10px_30px_rgba(10,20,40,0.05)] md:flex">
                 <div className="text-right">
                   <p className="text-sm font-semibold text-[var(--color-text)]">Alex Thompson</p>
@@ -49,6 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+      <SettingsDock />
     </div>
   );
 }

@@ -37,6 +37,11 @@ class _FakeClient:
             raise self._response
         return self._response
 
+    def get(self, *_args, **_kwargs):
+        if isinstance(self._response, Exception):
+            raise self._response
+        return self._response
+
 
 def _make_client() -> OpenRouterClient:
     return OpenRouterClient(
@@ -92,3 +97,10 @@ def test_openrouter_client_raises_on_timeout(monkeypatch: pytest.MonkeyPatch) ->
             system_prompt="system",
             user_prompt="user",
         )
+
+
+def test_openrouter_client_validate_connection_accepts_models_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    response = _FakeResponse({"data": [{"id": "openai/gpt-5.4-mini"}]})
+    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: _FakeClient(response))
+
+    _make_client().validate_connection()

@@ -24,6 +24,27 @@ class OpenRouterClient:
     timeout_seconds: int
     app_name: str
 
+    def validate_connection(self) -> None:
+        if not self.api_key:
+            raise OpenRouterConfigurationError(
+                "OPENROUTER_API_KEY is required when a parser mode uses OpenRouter."
+            )
+
+        try:
+            with httpx.Client(timeout=self.timeout_seconds) as client:
+                response = client.get(
+                    f"{self.base_url.rstrip('/')}/models",
+                    headers=_build_headers(self.api_key, self.app_name),
+                )
+                response.raise_for_status()
+        except httpx.TimeoutException as error:
+            raise OpenRouterError("OpenRouter request timed out.") from error
+        except httpx.HTTPStatusError as error:
+            detail = _extract_error_detail(error.response)
+            raise OpenRouterError(f"OpenRouter request failed: {detail}") from error
+        except httpx.HTTPError as error:
+            raise OpenRouterError("OpenRouter request failed.") from error
+
     def create_chat_completion(
         self,
         *,
@@ -45,19 +66,12 @@ class OpenRouterClient:
             ],
             "response_format": {"type": "json_object"},
         }
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://skillgraph-cv-matcher.local",
-            "X-Title": self.app_name,
-        }
-
         try:
             with httpx.Client(timeout=self.timeout_seconds) as client:
                 response = client.post(
                     f"{self.base_url.rstrip('/')}/chat/completions",
                     json=payload,
-                    headers=headers,
+                    headers=_build_headers(self.api_key, self.app_name),
                 )
                 response.raise_for_status()
         except httpx.TimeoutException as error:
@@ -104,3 +118,12 @@ def _extract_error_detail(response: httpx.Response) -> str:
             return detail
 
     return response.text or f"HTTP {response.status_code}"
+
+
+def _build_headers(api_key: str, app_name: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://skillgraph-cv-matcher.local",
+        "X-Title": app_name,
+    }

@@ -9,6 +9,7 @@ BACKUP_FILE ?= $(BACKUP_DIR)/$(POSTGRES_DB)-$(TIMESTAMP).sql
 
 up:
 	$(COMPOSE) up --build -d
+	$(MAKE) migrate
 
 down:
 	$(COMPOSE) down

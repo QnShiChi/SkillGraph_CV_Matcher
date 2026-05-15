@@ -23,8 +23,16 @@ class _FakeResponse:
 
 
 class _FakeClient:
-    def __init__(self, response: _FakeResponse | Exception) -> None:
-        self._response = response
+    def __init__(
+        self,
+        *,
+        post_response: _FakeResponse | Exception | None = None,
+        get_response: _FakeResponse | Exception | None = None,
+    ) -> None:
+        self._post_response = post_response
+        self._get_response = get_response
+        self.post_calls: list[tuple[tuple, dict]] = []
+        self.get_calls: list[tuple[tuple, dict]] = []
 
     def __enter__(self) -> "_FakeClient":
         return self
@@ -33,14 +41,20 @@ class _FakeClient:
         return None
 
     def post(self, *_args, **_kwargs):
-        if isinstance(self._response, Exception):
-            raise self._response
-        return self._response
+        self.post_calls.append((_args, _kwargs))
+        if isinstance(self._post_response, Exception):
+            raise self._post_response
+        if self._post_response is None:
+            raise AssertionError("Unexpected POST request")
+        return self._post_response
 
     def get(self, *_args, **_kwargs):
-        if isinstance(self._response, Exception):
-            raise self._response
-        return self._response
+        self.get_calls.append((_args, _kwargs))
+        if isinstance(self._get_response, Exception):
+            raise self._get_response
+        if self._get_response is None:
+            raise AssertionError("Unexpected GET request")
+        return self._get_response
 
 
 def _make_client() -> OpenRouterClient:
@@ -67,7 +81,7 @@ def test_openrouter_client_returns_message_content(monkeypatch: pytest.MonkeyPat
             ]
         }
     )
-    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: _FakeClient(response))
+    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: _FakeClient(post_response=response))
 
     result = _make_client().create_chat_completion(
         system_prompt="system",
@@ -79,7 +93,7 @@ def test_openrouter_client_returns_message_content(monkeypatch: pytest.MonkeyPat
 
 def test_openrouter_client_raises_on_http_error(monkeypatch: pytest.MonkeyPatch) -> None:
     response = _FakeResponse({"error": {"message": "provider error"}}, status_code=502)
-    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: _FakeClient(response))
+    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: _FakeClient(post_response=response))
 
     with pytest.raises(OpenRouterError, match="provider error"):
         _make_client().create_chat_completion(
@@ -90,7 +104,7 @@ def test_openrouter_client_raises_on_http_error(monkeypatch: pytest.MonkeyPatch)
 
 def test_openrouter_client_raises_on_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     timeout = httpx.TimeoutException("timed out")
-    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: _FakeClient(timeout))
+    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: _FakeClient(post_response=timeout))
 
     with pytest.raises(OpenRouterError, match="timed out"):
         _make_client().create_chat_completion(
@@ -99,8 +113,34 @@ def test_openrouter_client_raises_on_timeout(monkeypatch: pytest.MonkeyPatch) ->
         )
 
 
-def test_openrouter_client_validate_connection_accepts_models_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
-    response = _FakeResponse({"data": [{"id": "openai/gpt-5.4-mini"}]})
-    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: _FakeClient(response))
+def test_openrouter_client_validate_connection_uses_authenticated_chat_completion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    response = _FakeResponse(
+        {
+            "choices": [
+                {
+                    "message": {
+                        "content": "OK",
+                    }
+                }
+            ]
+        }
+    )
+    fake_client = _FakeClient(post_response=response)
+    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: fake_client)
 
     _make_client().validate_connection()
+
+    assert len(fake_client.post_calls) == 1
+    assert len(fake_client.get_calls) == 0
+
+
+def test_openrouter_client_validate_connection_raises_when_authenticated_request_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    response = _FakeResponse({"error": {"message": "Missing Authentication header"}}, status_code=401)
+    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: _FakeClient(post_response=response))
+
+    with pytest.raises(OpenRouterError, match="Missing Authentication header"):
+        _make_client().validate_connection()

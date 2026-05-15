@@ -2,11 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
-from app.api.runtime_settings import (
-    OPENROUTER_API_KEY_MODE_DATABASE_OVERRIDE,
-    OPENROUTER_API_KEY_MODE_SETTING,
-    resolve_openrouter_api_key,
-)
+from app.api.runtime_settings import resolve_openrouter_api_key
 from app.repositories.app_setting_repository import (
     OPENROUTER_API_KEY_SETTING,
     delete_setting,
@@ -23,6 +19,7 @@ from app.schemas.settings import (
 from app.services.openrouter_client import OpenRouterClient, OpenRouterError
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
+OPENROUTER_API_KEY_MODE_SETTING = "openrouter_api_key_mode"
 
 
 @router.get("/openrouter-api-key", response_model=OpenRouterApiKeyStatus)
@@ -46,14 +43,10 @@ def put_openrouter_api_key(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="API key cannot be empty.",
-        )
+    )
 
     upsert_setting(session, OPENROUTER_API_KEY_SETTING, api_key)
-    upsert_setting(
-        session,
-        OPENROUTER_API_KEY_MODE_SETTING,
-        OPENROUTER_API_KEY_MODE_DATABASE_OVERRIDE,
-    )
+    delete_setting(session, OPENROUTER_API_KEY_MODE_SETTING)
     return get_openrouter_api_key(session)
 
 
@@ -62,11 +55,7 @@ def delete_openrouter_api_key(
     session: Session = Depends(get_db_session),
 ) -> OpenRouterApiKeyStatus:
     delete_setting(session, OPENROUTER_API_KEY_SETTING)
-    upsert_setting(
-        session,
-        OPENROUTER_API_KEY_MODE_SETTING,
-        OPENROUTER_API_KEY_MODE_DATABASE_OVERRIDE,
-    )
+    delete_setting(session, OPENROUTER_API_KEY_MODE_SETTING)
     return get_openrouter_api_key(session)
 
 

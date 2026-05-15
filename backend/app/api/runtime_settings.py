@@ -8,19 +8,10 @@ from app.repositories.app_setting_repository import (
     get_setting_value,
 )
 
-OPENROUTER_API_KEY_MODE_SETTING = "openrouter_api_key_mode"
-OPENROUTER_API_KEY_MODE_DATABASE_OVERRIDE = "database_override"
-
 
 def resolve_openrouter_api_key(session: Session) -> tuple[str | None, str]:
     settings = get_settings()
     stored_api_key = get_setting_value(session, OPENROUTER_API_KEY_SETTING)
-    key_mode = get_setting_value(session, OPENROUTER_API_KEY_MODE_SETTING)
-
-    if key_mode == OPENROUTER_API_KEY_MODE_DATABASE_OVERRIDE:
-        if stored_api_key:
-            return stored_api_key, "database"
-        return None, "unset"
 
     env_api_key = settings.openrouter_api_key.strip() if settings.openrouter_api_key else None
     if env_api_key:
@@ -35,8 +26,7 @@ def resolve_openrouter_api_key(session: Session) -> tuple[str | None, str]:
 def hydrate_runtime_settings(session: Session) -> Settings:
     settings = get_settings()
     resolved_api_key, _ = resolve_openrouter_api_key(session)
-    settings.openrouter_api_key = resolved_api_key
-    return settings
+    return settings.model_copy(update={"openrouter_api_key": resolved_api_key})
 
 
 def get_runtime_settings(session: Session = Depends(get_db_session)) -> Settings:

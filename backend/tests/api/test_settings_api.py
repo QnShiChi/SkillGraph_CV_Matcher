@@ -84,7 +84,7 @@ def test_runtime_settings_hydrate_openrouter_key_from_database(session, monkeypa
     runtime_settings = get_runtime_settings(session)
 
     assert runtime_settings.openrouter_api_key == "db-secret"
-    assert get_settings().openrouter_api_key == "db-secret"
+    assert get_settings().openrouter_api_key == ""
 
 
 def test_runtime_settings_prefers_openrouter_key_from_env_over_database(
@@ -115,7 +115,7 @@ def test_runtime_settings_keeps_env_key_out_of_database_when_database_is_empty(
     assert get_setting_value(session, OPENROUTER_API_KEY_SETTING) is None
 
 
-def test_settings_clear_disables_env_key_until_user_saves_a_replacement(
+def test_settings_clear_falls_back_to_env_key_when_available(
     client,
     session,
     monkeypatch: pytest.MonkeyPatch,
@@ -136,17 +136,17 @@ def test_settings_clear_disables_env_key_until_user_saves_a_replacement(
 
     assert response.status_code == 200
     assert response.json() == {
-        "has_openrouter_api_key": False,
+        "has_openrouter_api_key": True,
         "has_saved_openrouter_api_key": False,
-        "active_source": "unset",
+        "active_source": "env",
     }
 
     response = client.get("/api/settings/openrouter-api-key/status")
     assert response.status_code == 200
-    assert response.json()["connection_status"] == "unset"
+    assert response.json()["connection_status"] == "connected"
 
 
-def test_settings_save_replacement_key_after_clear_overrides_env_key(
+def test_saved_database_key_stays_fallback_when_env_key_exists(
     client,
     session,
     monkeypatch: pytest.MonkeyPatch,
@@ -162,9 +162,6 @@ def test_settings_save_replacement_key_after_clear_overrides_env_key(
     get_settings.cache_clear()
 
     upsert_setting(session, OPENROUTER_API_KEY_SETTING, "db-secret")
-
-    response = client.delete("/api/settings/openrouter-api-key")
-    assert response.status_code == 200
 
     response = client.put(
         "/api/settings/openrouter-api-key",
@@ -175,7 +172,7 @@ def test_settings_save_replacement_key_after_clear_overrides_env_key(
     assert response.json() == {
         "has_openrouter_api_key": True,
         "has_saved_openrouter_api_key": True,
-        "active_source": "database",
+        "active_source": "env",
     }
 
     response = client.get("/api/settings/openrouter-api-key/status")
@@ -183,4 +180,5 @@ def test_settings_save_replacement_key_after_clear_overrides_env_key(
     assert response.json()["connection_status"] == "connected"
 
     runtime_settings = get_runtime_settings(session)
-    assert runtime_settings.openrouter_api_key == "replacement-secret"
+    assert runtime_settings.openrouter_api_key == "env-secret"
+    assert get_setting_value(session, OPENROUTER_API_KEY_SETTING) == "replacement-secret"

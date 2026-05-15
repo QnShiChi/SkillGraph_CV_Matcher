@@ -30,10 +30,20 @@ class OpenRouterClient:
                 "OPENROUTER_API_KEY is required when a parser mode uses OpenRouter."
             )
 
+        payload = {
+            "model": self.model,
+            "temperature": 0.0,
+            "max_tokens": 1,
+            "messages": [
+                {"role": "system", "content": "Reply with OK."},
+                {"role": "user", "content": "OK"},
+            ],
+        }
         try:
             with httpx.Client(timeout=self.timeout_seconds) as client:
-                response = client.get(
-                    f"{self.base_url.rstrip('/')}/models",
+                response = client.post(
+                    f"{self.base_url.rstrip('/')}/chat/completions",
+                    json=payload,
                     headers=_build_headers(self.api_key, self.app_name),
                 )
                 response.raise_for_status()

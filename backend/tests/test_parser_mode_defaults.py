@@ -20,6 +20,7 @@ def test_env_example_enables_hybrid_parser_for_jd_and_cv() -> None:
 
     assert _read_env_value(env_example, "JD_PARSER_MODE") == "hybrid"
     assert _read_env_value(env_example, "CV_PARSER_MODE") == "hybrid"
+    assert _read_env_value(env_example, "CV_PARSER_ENABLE_FALLBACK") == "false"
 
 
 def test_local_env_enables_hybrid_parser_for_jd_and_cv() -> None:
@@ -27,3 +28,4 @@ def test_local_env_enables_hybrid_parser_for_jd_and_cv() -> None:
 
     assert _read_env_value(env_file, "JD_PARSER_MODE") == "hybrid"
     assert _read_env_value(env_file, "CV_PARSER_MODE") == "hybrid"
+    assert _read_env_value(env_file, "CV_PARSER_ENABLE_FALLBACK") == "false"
